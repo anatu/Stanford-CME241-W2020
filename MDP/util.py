@@ -1,6 +1,10 @@
 import collections, random
 
 ############################################################
+############################################################
+# ITERATION ALGORITHMS
+############################################################
+############################################################
 
 # An algorithm that solves an MDP (i.e., computes the optimal
 # policy).
@@ -53,7 +57,15 @@ class ValueIteration(MDPAlgorithm):
         self.pi = pi
         self.V = V
 
-# An abstract class representing a Markov Decision Process (MDP).
+############################################################
+############################################################
+# MARKOV CHAIN DATA STRUCTURES
+############################################################
+############################################################
+
+# An abstract class representing a Markov Decision Process (MDP). This can also handle MRPs,
+# but we will account for this through the means by which the MDP is solved (i.e. to turn the MDP
+# into an MRP we will simply set it up to be solved using a fixed policy corresponding to the desired "actions")
 class MDP:
     # Return the start state.
     def startState(self): raise NotImplementedError("Override me")
@@ -88,26 +100,13 @@ class MDP:
         # print "%d states" % len(self.states)
         # print self.states
 
-############################################################
-
-# A simple example of an MDP where states are integers in [-n, +n].
-# and actions involve moving left and right by one position.
-# We get rewarded for going to the right.
-class NumberLineMDP(MDP):
-    def __init__(self, n=5): self.n = n
-    def startState(self): return 0
-    def actions(self, state): return [-1, +1]
-    def succAndProbReward(self, state, action):
-        return [(state, 0.4, 0),
-                (min(max(state + action, -self.n), +self.n), 0.6, state)]
-    def discount(self): return 0.9
-
-############################################################
-
-
 
 
 ############################################################
+############################################################
+# RL ALGORITHMS AND FIXED-POLICY EVALUATION
+############################################################
+########################################################################################################################
 
 # Abstract class: an RLAlgorithm performs reinforcement learning.  All it needs
 # to know is the set of available actions to take.  The simulator (see
@@ -137,8 +136,73 @@ class FixedRLAlgorithm(RLAlgorithm):
     # Don't do anything: just stare off into space.
     def incorporateFeedback(self, state, action, reward, newState): pass
 
+
+# Performs Q-learning.  Read util.RLAlgorithm for more information.
+# actions: a function that takes a state and returns a list of actions.
+# discount: a number between 0 and 1, which determines the discount factor
+# featureExtractor: a function that takes a state and action and returns a list of (feature name, feature value) pairs.
+# explorationProb: the epsilon value indicating how frequently the policy
+# returns a random action
+class QLearningAlgorithm(RLAlgorithm):
+    def __init__(self, actions, discount, featureExtractor, explorationProb=0.2):
+        self.actions = actions
+        self.discount = discount
+        self.featureExtractor = featureExtractor
+        self.explorationProb = explorationProb
+        self.weights = defaultdict(float)
+        self.numIters = 0
+
+    # Return the Q function associated with the weights and features
+    def getQ(self, state, action):
+        score = 0
+        for f, v in self.featureExtractor(state, action):
+            score += self.weights[f] * v
+        return score
+
+    # This algorithm will produce an action given a state.
+    # Here we use the epsilon-greedy algorithm: with probability
+    # |explorationProb|, take a random action.
+    def getAction(self, state):
+        self.numIters += 1
+        if random.random() < self.explorationProb:
+            return random.choice(self.actions(state))
+        else:
+            return max((self.getQ(state, action), action) for action in self.actions(state))[1]
+
+    # Call this function to get the step size to update the weights.
+    def getStepSize(self):
+        return 1.0 / math.sqrt(self.numIters)
+
+    # We will call this function with (s, a, r, s'), which you should use to update |weights|.
+    # Note that if s is a terminal state, then s' will be None.  Remember to check for this.
+    # You should update the weights using self.getStepSize(); use
+    # self.getQ() to compute the current estimate of the parameters.
+    def incorporateFeedback(self, state, action, reward, newState):
+        # BEGIN_YOUR_CODE (our solution is 12 lines of code, but don't worry if you deviate from this)
+        Q_current = self.getQ(state, action)
+
+        new_actions = self.actions(newState)
+        new_Qs = []
+        for act in new_actions:
+            new_Qs.append(self.getQ(newState, act))
+        V_opt = max(new_Qs)
+
+        features = self.featureExtractor(state, action)
+        stepSize = self.getStepSize()
+        for feature in features:
+            key = feature[0]
+            value = feature[1]
+            self.weights[key] = self.weights.get(key, 0) - stepSize*(Q_current - (reward + self.discount*V_opt))*value    
+
 ############################################################
 
+
+
+############################################################
+############################################################
+# SIMULATION
+############################################################
+############################################################
 # Perform |numTrials| of the following:
 # On each trial, take the MDP |mdp| and an RLAlgorithm |rl| and simulates the
 # RL algorithm according to the dynamics of the MDP.
@@ -184,3 +248,56 @@ def simulate(mdp, rl, numTrials=10, maxIterations=1000, verbose=False,
             print "Trial %d (totalReward = %s): %s" % (trial, totalReward, sequence)
         totalRewards.append(totalReward)
     return totalRewards
+
+
+
+
+def simulate_QL_over_MDP(mdp, featureExtractor):
+    # NOTE: adding more code to this function is totally optional, but it will probably be useful
+    # to you as you work to answer question 4b (a written question on this assignment).  We suggest
+    # that you add a few lines of code here to run value iteration, simulate Q-learning on the MDP,
+    # and then print some stats comparing the policies learned by these two approaches.
+    # BEGIN_YOUR_CODE
+    valiter = ValueIteration()
+    valiter.solve(smallMDP)
+    # Simulate with 20% exploration probability, and then set to 0 after simulation
+    rl = QLearningAlgorithm(mdp.actions, mdp.discount(), featureExtractor, explorationProb = 0.2)
+    util.simulate(mdp, rl, 30000, verbose = False)
+    rl.explorationProb = 0
+    # Extract the optimal policies and replicate the dict that comes from valiter.pi
+    rl_result = dict()
+    same = 0
+    different = 0
+    for state in valiter.pi.keys():
+        rl_result[state] = rl.getAction(state)
+        print rl.getAction(state), valiter.pi[state]
+        if rl.getAction(state) == valiter.pi[state]:
+            same = same + 1
+        else: 
+            different = different + 1
+
+    print same, different
+
+    return valiter.pi, rl_result    
+    # END_YOUR_CODE
+
+
+def blackjackFeatureExtractor(state, action):
+    total, nextCard, counts = state
+
+    # BEGIN_YOUR_CODE (our solution is 8 lines of code, but don't worry if you deviate from this)
+    features = []
+    # Indicator for action and current total
+    features.append(((action, total), 1))
+
+    if counts != None:
+        count_id = []
+        for i in range(len(counts)):
+            # Indicator for counts of each card
+            features.append(((action, i, counts[i]), 1))
+            if counts[i] == 0: count_id.append(0)
+            else: count_id.append(1)
+        # Indicator for the action and presence/absence of each face value
+        features.append(((action, tuple(count_id)), 1))
+    return features
+    # END_YOUR_CODE
