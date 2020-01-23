@@ -29,41 +29,37 @@ class SampleMDP(util.MDP):
         actions = ["-1", "+1"]
         return actions
 
+    def isTerminalState(self, state):
+    	return (state == 2) or (state == -2)
+
     # Given a |state| and |action|, return a list of (newState, prob, reward) tuples
     # corresponding to the states reachable from |state| when taking |action|.
     # Remember that if |state| is an end state, you should return an empty list [].
     def succAndProbReward(self, state, action):
         results = []
-
         # Check for terminal states
-        if (state == 2) | (state == -2):
+        if isTerminalState:
         	return []
-
     	if state == 1:
     		fwdReward = 100
     	else:
     		fwdReward = -5
-   		
    		if state == -1:
    			backReward = 20
    		else:
    			backReward = -5 	
-
-
         if action == "+1":
         	results.append((state+1,0.7,fwdReward))
         	results.append((state-1,0.3,backReward))
 
         elif action == "-1":
         	results.append((state+1,0.2,fwdReward))
-        	results.append((state-1,0.8,backReward))
-        
+        	results.append((state-1,0.8,backReward))        
         return results
 
     # Set the discount factor (float or integer) to discount future rewards
     def discount(self):
         return 1
-
 
 
 
@@ -82,3 +78,11 @@ class NumberLineMDP(MDP):
     def discount(self): return 0.9
 
 ############################################################
+
+
+# class Lecture2MRP(util.MRP)
+# 	def __init__:
+		
+
+# 	def startState(self):
+# 		return 0

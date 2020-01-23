@@ -15,6 +15,8 @@ class MDPAlgorithm:
     def solve(self, mdp): raise NotImplementedError("Override me")
 
 ############################################################
+# Instantiate these classes, then call the solve function on the MDP object
+# corresponding to the MDP that you want to solve
 class ValueIteration(MDPAlgorithm):
     '''
     Solve the MDP using value iteration.  Your solve() method must set
@@ -57,15 +59,16 @@ class ValueIteration(MDPAlgorithm):
         self.pi = pi
         self.V = V
 
+
+
+
 ############################################################
 ############################################################
 # MARKOV CHAIN DATA STRUCTURES
 ############################################################
 ############################################################
 
-# An abstract class representing a Markov Decision Process (MDP). This can also handle MRPs,
-# but we will account for this through the means by which the MDP is solved (i.e. to turn the MDP
-# into an MRP we will simply set it up to be solved using a fixed policy corresponding to the desired "actions")
+# An abstract class representing a Markov Decision Process (MDP). 
 class MDP:
     # Return the start state.
     def startState(self): raise NotImplementedError("Override me")
@@ -99,6 +102,40 @@ class MDP:
                         queue.append(newState)
         # print "%d states" % len(self.states)
         # print self.states
+
+
+# An abstract class representing a Markov Reward Process (MRP). 
+class MRP:
+    # Return the start state.
+    def startState(self): raise NotImplementedError("Override me")
+
+
+    # Return a list of (newState, prob, reward) tuples corresponding to edges
+    # coming out of |state|.
+    # Mapping to notation from class:
+    #   state = s, action = a, newState = s', prob = T(s, a, s'), reward = Reward(s, a, s')
+    # If IsEnd(state), return the empty list.
+    def succAndProbReward(self, state): raise NotImplementedError("Override me")
+
+    def discount(self): raise NotImplementedError("Override me")
+
+    # Compute set of states reachable from startState.  Helper function for
+    # MDPAlgorithms to know which states to compute values and policies for.
+    # This function sets |self.states| to be the set of all states.
+    def computeStates(self):
+        self.states = set()
+        queue = []
+        self.states.add(self.startState())
+        queue.append(self.startState())
+        while len(queue) > 0:
+            state = queue.pop()
+            for newState, prob, reward in self.succAndProbReward(state):
+                if newState not in self.states:
+                    self.states.add(newState)
+                    queue.append(newState)
+        # print "%d states" % len(self.states)
+        # print self.states
+
 
 
 
