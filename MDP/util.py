@@ -1,4 +1,5 @@
 import collections, random
+import numpy as np
 
 ############################################################
 ############################################################
@@ -58,6 +59,28 @@ class ValueIteration(MDPAlgorithm):
         print "ValueIteration: %d iterations" % numIters
         self.pi = pi
         self.V = V
+
+
+class BellmanMatrix(MDPAlgorithm):
+    '''
+    Solves an MRP using the Bellman equation using a direct method
+    by matrix inversion of the system V = R + gamma*P*V
+    so that the optimal value function is computed analytically
+    as (I-gamma*P)^(-1)*R using matrix inversion / algebra.
+    
+    V is a vector of value functions for states 1...n
+    R is rewards for states 1...n
+    P is the transition probability matrix P_ij = prob of moving from state i to j    
+    gamma is discount rate
+    '''
+
+    def solve(self, mrp):
+        gamma = mrp.discount()
+
+        # Pull states from utility function
+        states = mrp.computeStates()
+
+        for state in states:
 
 
 
@@ -132,9 +155,11 @@ class MRP:
             for newState, prob, reward in self.succAndProbReward(state):
                 if newState not in self.states:
                     self.states.add(newState)
+                    self.rewards.add()
                     queue.append(newState)
         # print "%d states" % len(self.states)
         # print self.states
+
 
 
 

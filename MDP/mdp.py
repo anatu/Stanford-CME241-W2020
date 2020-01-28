@@ -80,9 +80,47 @@ class NumberLineMDP(MDP):
 ############################################################
 
 
-# class Lecture2MRP(util.MRP)
-# 	def __init__:
-		
+# Student MRP from Lecture 2 slides
 
-# 	def startState(self):
-# 		return 0
+class StudentMRP(util.MRP)
+
+    # Return a value of any type capturing the start state of the MDP.
+    def startState(self):
+    	# Start at Class 1
+        return 0
+
+    # Check for a leaf node (terminal state) in the MRP graph
+    def isTerminalState(self, state):
+    	return state == "Sleep"
+
+    # Given a |state| and |action|, return a list of (newState, prob, reward) tuples
+    # corresponding to the states reachable from |state| when taking |action|.
+    # Remember that if |state| is an end state, you should return an empty list [].
+    def succAndProbReward(self, state, action):
+        results = []
+        # Check for terminal states
+        if isTerminalState:
+        	return []
+
+        if state == "Class 1":
+        	results.append(("Class 2", 0.5, -2))
+        	results.append(("Facebook", 0.5, -1))
+        elif state == "Class 2":
+        	results.append(("Sleep", 0.2, 0))
+        	results.append(("Class 3", 0.8, -2))
+        elif state == "Class 3":
+        	results.append(("Pass", 0.6, 10))
+        	results.append(("Pub", 0.4, 1))
+        elif state == "Pub":
+        	results.append(("Class 1", 0.2, -2))
+        	results.append(("Class 2", 0.4, -2))
+        	results.append(("Class 3", 0.4, -2))
+        elif state == "Facebook":
+        	results.append(("Class 1", 0.1, -2))
+        	results.append(("Facebook", 0.9, -1))
+
+        return results
+
+    # Set the discount factor (float or integer) to discount future rewards
+    def discount(self):
+        return 1
