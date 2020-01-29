@@ -93,6 +93,18 @@ class StudentMRP(util.MRP)
     def isTerminalState(self, state):
     	return state == "Sleep"
 
+    def stateRewards(self):
+    	rd = dict()
+    	rd["Class 1"] = -2
+    	rd["Class 2"] = -2
+    	rd["Class 3"] = -2
+    	rd["Pass"] = 10
+    	rd["Pub"] = 1
+    	rd["Facebook"] = -1
+    	rd["Sleep"] = 0
+
+    	return rd
+
     # Given a |state| and |action|, return a list of (newState, prob, reward) tuples
     # corresponding to the states reachable from |state| when taking |action|.
     # Remember that if |state| is an end state, you should return an empty list [].

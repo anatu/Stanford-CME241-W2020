@@ -125,10 +125,6 @@ class MDP:
 
     def discount(self): raise NotImplementedError("Override me")
 
-    # Return a dict mapping states to rewards
-    # Additional helper function for algorithm to quickly pull the reward for each unique state
-    # rather than having to parse it out from the computeStates function
-    def stateRewards(self, state, action): raise NotImplementedError("Override me")
 
     # Compute set of states reachable from startState.  Helper function for
     # MDPAlgorithms to know which states to compute values and policies for.
@@ -163,6 +159,11 @@ class MRP:
     def succAndProbReward(self, state): raise NotImplementedError("Override me")
 
     def discount(self): raise NotImplementedError("Override me")
+
+    # Return a dict mapping states to rewards
+    # Additional helper function for algorithm to quickly pull the reward for each unique state
+    # rather than having to parse it out from the computeStates function
+    def stateRewards(self, state, action): raise NotImplementedError("Override me")
 
     # Compute set of states reachable from startState.  Helper function for
     # MDPAlgorithms to know which states to compute values and policies for.
