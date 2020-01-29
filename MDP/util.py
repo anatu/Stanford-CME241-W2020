@@ -80,10 +80,26 @@ class BellmanMatrix(MDPAlgorithm):
         # Pull states from utility function
         states = mrp.computeStates()
 
-        for state in states:
+        # Initialize matrices
+        R = np.zeros(len(states))
+        P = np.zeros((len(states),len(states)))
+        I = np.eye(len(states))
 
+        rewardDict = mrp.stateRewards() 
 
+        for i in range(len(states)):
+            state = states(i)
+            R[i] = rewardDict[state]
+            successors = mrp.succAndProbReward(state)
+            # (newState, prob, reward) tuples
+            for succ in successors:
+                succState = succ[0]
+                prob = succ[1]
+                P[i][states.index(succState)] = prob
+        
+        V = np.matmul(np.linalg.inv(I-gamma*P),R)        
 
+        return V
 
 ############################################################
 ############################################################
@@ -106,7 +122,13 @@ class MDP:
     # If IsEnd(state), return the empty list.
     def succAndProbReward(self, state, action): raise NotImplementedError("Override me")
 
+
     def discount(self): raise NotImplementedError("Override me")
+
+    # Return a dict mapping states to rewards
+    # Additional helper function for algorithm to quickly pull the reward for each unique state
+    # rather than having to parse it out from the computeStates function
+    def stateRewards(self, state, action): raise NotImplementedError("Override me")
 
     # Compute set of states reachable from startState.  Helper function for
     # MDPAlgorithms to know which states to compute values and policies for.
@@ -136,7 +158,7 @@ class MRP:
     # Return a list of (newState, prob, reward) tuples corresponding to edges
     # coming out of |state|.
     # Mapping to notation from class:
-    #   state = s, action = a, newState = s', prob = T(s, a, s'), reward = Reward(s, a, s')
+    #   state = s, action = a, newState = s', prob = T(s, s'), reward = Reward(s, s')
     # If IsEnd(state), return the empty list.
     def succAndProbReward(self, state): raise NotImplementedError("Override me")
 
