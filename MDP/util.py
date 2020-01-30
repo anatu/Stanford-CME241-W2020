@@ -56,7 +56,7 @@ class ValueIteration(MDPAlgorithm):
 
         # Compute the optimal policy now
         pi = computeOptimalPolicy(mdp, V)
-        print "ValueIteration: %d iterations" % numIters
+        print("ValueIteration: %d iterations" % numIters)
         self.pi = pi
         self.V = V
 
@@ -98,7 +98,7 @@ class BellmanMatrix(MDPAlgorithm):
                 P[i][states.index(succState)] = prob
         
         V = np.matmul(np.linalg.inv(I-gamma*P),R)        
-
+        # Note that we only return 
         return V
 
 ############################################################
@@ -154,7 +154,7 @@ class MRP:
     # Return a list of (newState, prob, reward) tuples corresponding to edges
     # coming out of |state|.
     # Mapping to notation from class:
-    #   state = s, action = a, newState = s', prob = T(s, s'), reward = Reward(s, s')
+    #   state = s,  newState = s', prob = T(s, s'), reward = Reward(s, s')
     # If IsEnd(state), return the empty list.
     def succAndProbReward(self, state): raise NotImplementedError("Override me")
 
@@ -163,7 +163,7 @@ class MRP:
     # Return a dict mapping states to rewards
     # Additional helper function for algorithm to quickly pull the reward for each unique state
     # rather than having to parse it out from the computeStates function
-    def stateRewards(self, state, action): raise NotImplementedError("Override me")
+    def stateRewards(self): raise NotImplementedError("Override me")
 
     # Compute set of states reachable from startState.  Helper function for
     # MDPAlgorithms to know which states to compute values and policies for.
@@ -211,7 +211,7 @@ class RLAlgorithm:
     def incorporateFeedback(self, state, action, reward, newState): raise NotImplementedError("Override me")
 
 # An RL algorithm that acts according to a fixed policy |pi| and doesn't
-# actually do any learning.
+# actually do any learning. (This is equivalent to policy evaluation!)
 class FixedRLAlgorithm(RLAlgorithm):
     def __init__(self, pi): self.pi = pi
 
@@ -220,6 +220,7 @@ class FixedRLAlgorithm(RLAlgorithm):
 
     # Don't do anything: just stare off into space.
     def incorporateFeedback(self, state, action, reward, newState): pass
+
 
 
 # Performs Q-learning.  Read util.RLAlgorithm for more information.
@@ -330,7 +331,7 @@ def simulate(mdp, rl, numTrials=10, maxIterations=1000, verbose=False,
             totalDiscount *= mdp.discount()
             state = newState
         if verbose:
-            print "Trial %d (totalReward = %s): %s" % (trial, totalReward, sequence)
+            print("Trial %d (totalReward = %s): %s" % (trial, totalReward, sequence))
         totalRewards.append(totalReward)
     return totalRewards
 
@@ -355,13 +356,13 @@ def simulate_QL_over_MDP(mdp, featureExtractor):
     different = 0
     for state in valiter.pi.keys():
         rl_result[state] = rl.getAction(state)
-        print rl.getAction(state), valiter.pi[state]
+        print(rl.getAction(state), valiter.pi[state])
         if rl.getAction(state) == valiter.pi[state]:
             same = same + 1
         else: 
             different = different + 1
 
-    print same, different
+    print(same, different)
 
     return valiter.pi, rl_result    
     # END_YOUR_CODE

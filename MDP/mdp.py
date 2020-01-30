@@ -16,12 +16,12 @@ from util import ValueIteration
 # If your action results in transitioning to state -2, then you receive a reward of 20. If your action results in transitioning to state 2, then your reward is 100. Otherwise, your reward is -5. Assume the discount factor γ is 1.
 class SampleMDP(util.MDP):
 
-	# Don't need a constructor here  
+    # Don't need a constructor here  
     # def __init__(self):
 
     # Return a value of any type capturing the start state of the MDP.
     def startState(self):
-    	# Start at State 0
+        # Start at State 0
         return 0
 
     # Return a list of strings representing actions possible from |state|.
@@ -30,7 +30,7 @@ class SampleMDP(util.MDP):
         return actions
 
     def isTerminalState(self, state):
-    	return (state == 2) or (state == -2)
+        return (state == 2) or (state == -2)
 
     # Given a |state| and |action|, return a list of (newState, prob, reward) tuples
     # corresponding to the states reachable from |state| when taking |action|.
@@ -39,22 +39,22 @@ class SampleMDP(util.MDP):
         results = []
         # Check for terminal states
         if isTerminalState:
-        	return []
-    	if state == 1:
-    		fwdReward = 100
-    	else:
-    		fwdReward = -5
-   		if state == -1:
-   			backReward = 20
-   		else:
-   			backReward = -5 	
+            return []
+        if state == 1:
+            fwdReward = 100
+        else:
+            fwdReward = -5
+        if state == -1:
+            backReward = 20
+        else:
+            backReward = -5     
         if action == "+1":
-        	results.append((state+1,0.7,fwdReward))
-        	results.append((state-1,0.3,backReward))
+            results.append((state+1,0.7,fwdReward))
+            results.append((state-1,0.3,backReward))
 
         elif action == "-1":
-        	results.append((state+1,0.2,fwdReward))
-        	results.append((state-1,0.8,backReward))        
+            results.append((state+1,0.2,fwdReward))
+            results.append((state-1,0.8,backReward))        
         return results
 
     # Set the discount factor (float or integer) to discount future rewards
@@ -68,7 +68,7 @@ class SampleMDP(util.MDP):
 # A simple example of an MDP where states are integers in [-n, +n].
 # and actions involve moving left and right by one position.
 # We get rewarded for going to the right.
-class NumberLineMDP(MDP):
+class NumberLineMDP(util.MDP):
     def __init__(self, n=5): self.n = n
     def startState(self): return 0
     def actions(self, state): return [-1, +1]
@@ -82,57 +82,57 @@ class NumberLineMDP(MDP):
 
 # Student MRP from Lecture 2 slides
 
-class StudentMRP(util.MRP)
+class StudentMRP(util.MRP):
 
     # Return a value of any type capturing the start state of the MDP.
     def startState(self):
-    	# Start at Class 1
+        # Start at Class 1
         return 0
 
     # Check for a leaf node (terminal state) in the MRP graph
     def isTerminalState(self, state):
-    	return state == "Sleep"
+        return state == "Sleep"
 
     def stateRewards(self):
-    	rd = dict()
-    	rd["Class 1"] = -2
-    	rd["Class 2"] = -2
-    	rd["Class 3"] = -2
-    	rd["Pass"] = 10
-    	rd["Pub"] = 1
-    	rd["Facebook"] = -1
-    	rd["Sleep"] = 0
+        rd = dict()
+        rd["Class 1"] = -2
+        rd["Class 2"] = -2
+        rd["Class 3"] = -2
+        rd["Pass"] = 10
+        rd["Pub"] = 1
+        rd["Facebook"] = -1
+        rd["Sleep"] = 0
 
-    	return rd
+        return rd
 
     # Given a |state| and |action|, return a list of (newState, prob, reward) tuples
     # corresponding to the states reachable from |state| when taking |action|.
     # Remember that if |state| is an end state, you should return an empty list [].
-    def succAndProbReward(self, state, action):
+    def succAndProbReward(self, state):
         results = []
         # Check for terminal states
-        if isTerminalState:
-        	return []
+        if self.isTerminalState(state):
+            return []
 
         if state == "Class 1":
-        	results.append(("Class 2", 0.5, -2))
-        	results.append(("Facebook", 0.5, -1))
+            results.append(("Class 2", 0.5, -2))
+            results.append(("Facebook", 0.5, -1))
         elif state == "Class 2":
-        	results.append(("Sleep", 0.2, 0))
-        	results.append(("Class 3", 0.8, -2))
+            results.append(("Sleep", 0.2, 0))
+            results.append(("Class 3", 0.8, -2))
         elif state == "Class 3":
-        	results.append(("Pass", 0.6, 10))
-        	results.append(("Pub", 0.4, 1))
+            results.append(("Pass", 0.6, 10))
+            results.append(("Pub", 0.4, 1))
         elif state == "Pub":
-        	results.append(("Class 1", 0.2, -2))
-        	results.append(("Class 2", 0.4, -2))
-        	results.append(("Class 3", 0.4, -2))
+            results.append(("Class 1", 0.2, -2))
+            results.append(("Class 2", 0.4, -2))
+            results.append(("Class 3", 0.4, -2))
         elif state == "Facebook":
-        	results.append(("Class 1", 0.1, -2))
-        	results.append(("Facebook", 0.9, -1))
+            results.append(("Class 1", 0.1, -2))
+            results.append(("Facebook", 0.9, -1))
 
         return results
 
     # Set the discount factor (float or integer) to discount future rewards
     def discount(self):
-        return 1
+        return 0.9
