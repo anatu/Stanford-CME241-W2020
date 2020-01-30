@@ -87,7 +87,7 @@ class StudentMRP(util.MRP):
     # Return a value of any type capturing the start state of the MDP.
     def startState(self):
         # Start at Class 1
-        return 0
+        return "Class 1"
 
     # Check for a leaf node (terminal state) in the MRP graph
     def isTerminalState(self, state):

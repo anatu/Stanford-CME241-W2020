@@ -77,25 +77,25 @@ class BellmanMatrix(MDPAlgorithm):
     def solve(self, mrp):
         gamma = mrp.discount()
 
-        # Pull states from utility function
-        states = mrp.computeStates()
+        # Pull states from utility function. Populates into self.states
+        mrp.computeStates()
 
         # Initialize matrices
-        R = np.zeros(len(states))
-        P = np.zeros((len(states),len(states)))
-        I = np.eye(len(states))
+        R = np.zeros(len(mrp.states))
+        P = np.zeros((len(mrp.states),len(mrp.states)))
+        I = np.eye(len(mrp.states))
 
         rewardDict = mrp.stateRewards() 
 
-        for i in range(len(states)):
-            state = states(i)
+        for i in range(len(mrp.states)):
+            state = mrp.states[i]
             R[i] = rewardDict[state]
             successors = mrp.succAndProbReward(state)
             # (newState, prob, reward) tuples
             for succ in successors:
                 succState = succ[0]
                 prob = succ[1]
-                P[i][states.index(succState)] = prob
+                P[i][mrp.states.index(succState)] = prob
         
         V = np.matmul(np.linalg.inv(I-gamma*P),R)        
         # Note that we only return 
@@ -169,16 +169,17 @@ class MRP:
     # MDPAlgorithms to know which states to compute values and policies for.
     # This function sets |self.states| to be the set of all states.
     def computeStates(self):
-        self.states = set()
+        self.states = []
+        self.rewards = []
         queue = []
-        self.states.add(self.startState())
+        self.states.append(self.startState())
         queue.append(self.startState())
         while len(queue) > 0:
             state = queue.pop()
             for newState, prob, reward in self.succAndProbReward(state):
                 if newState not in self.states:
-                    self.states.add(newState)
-                    self.rewards.add()
+                    self.states.append(newState)
+                    self.rewards.append(reward)
                     queue.append(newState)
         # print "%d states" % len(self.states)
         # print self.states
