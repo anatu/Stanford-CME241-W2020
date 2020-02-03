@@ -1,0 +1,5 @@
+See http://web.stanford.edu/class/cme241/
+
+1. Work out (in LaTeX) the equations for Absolute/Relative Risk Premia for CARA/CRRA respectively
+2. Write the solutions to Portfolio Applications covered in class with precise notation (in LaTeX)
+3. Model Merton's Portfolio problem as an MDP (write the model in LaTeX) / implement the model in code

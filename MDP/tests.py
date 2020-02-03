@@ -11,4 +11,4 @@ if __name__ == "__main__":
 	prob = mdp.StudentMRP()
 	solver = util.BellmanMatrix()
 	V = solver.solve(prob)
-	print(V)
+	print(list(zip(prob.states, V)))
