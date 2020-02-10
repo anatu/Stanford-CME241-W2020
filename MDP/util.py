@@ -108,6 +108,8 @@ class BellmanMatrix(MDPAlgorithm):
 ############################################################
 
 # An abstract class representing a Markov Decision Process (MDP). 
+# TODO: Improve this as per e.g. https://github.com/aimacode/aima-python/blob/master/mdp.py
+# or the examples in class code
 class MDP:
     # Return the start state.
     def startState(self): raise NotImplementedError("Override me")
