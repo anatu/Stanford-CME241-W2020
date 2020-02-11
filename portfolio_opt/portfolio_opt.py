@@ -12,12 +12,12 @@ class MertonProblem():
 	# Declare the parameters for the problem
 	# Initial wealth (W0)
 	# Relative risk-aversion (gamma)
-	# Distribution parameters for the risky asset (mu, sigma)
+	# Distribution parameters for the risky asset (mean and variance)
 	def __init__(self, W0, gamma, mu, sigma):
 		self.W0 = W0
 		self.gamma = gamma
 		self.mu = mu
-		self.sigma = sigma
+		self.var = var
 
 		# Subjective utility discount rate
 		self.rho = 0.7
@@ -46,7 +46,7 @@ class MertonProblem():
     	eps = 1e-6
 
     	# Optimal split fraction between risky and riskless asset
-    	pi_opt = (self.mu - self.r)/(1-self.gamma)
+    	pi_opt = (self.mu - self.r)/(self.var*self.gamma)
 
     	# Compute parameter
     	nu = (self.rho/self.gamma) - (1-self.gamma)*(((self.mu-self.r)*pi_opt/2*self.gamma)+(self.r/self.gamma))
@@ -64,3 +64,4 @@ class MertonProblem():
 
 if __name__ == "main":
 	mp = MertonProblem()
+	
