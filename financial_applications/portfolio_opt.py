@@ -63,5 +63,6 @@ class MertonProblem():
 
 
 if __name__ == "main":
-	mp = MertonProblem()
+	mp = MertonProblem(W0 = 100, gamma = 0.8, mu = 1, sigma = 0.5)
+    
 	
