@@ -246,9 +246,9 @@ if __name__ == "__main__":
     vi = util.ValueIteration()
     mdp = Problem2MDP(jobWages = [10, 15, 20, 30], unempWage = 5,
         alpha = 0.3)
-        vi.solve(mdp)
-        print(vi.pi)
-        print(vi.V)
+    vi.solve(mdp)
+    print(vi.pi)
+    print(vi.V)
     ###########################################################
     ###########################################################
     
