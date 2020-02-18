@@ -75,11 +75,15 @@ def samplePolicy():
 	}
 	return policy
 
-def simulate_firstVisit(grid, policy, T):
+def simulate(grid, policy, T, mode):
 	'''
 	Simulate a run-through of "first-visit" MC policy evaluation
 	for T rollouts of the game, starting with a given policy
 	'''
+
+	if mode not in ["first_visit", "every_visit"]:
+		raise ValueError("Algorithm not understood. Must be either first_visit or every_visit")
+
 
 	# Initialize the value-function data structure for all states
 	# and empty lists to stack cumulative rewards into
@@ -103,13 +107,26 @@ def simulate_firstVisit(grid, policy, T):
 		
 		seenStates = set()
 
-		for state,G in cumRewards:
-			if state not in seenStates:
+		if mode == "first_visit":
+			for state,G in cumRewards:
+				# "First-visit" evaluation - only calculate the value function the first time
+				# the state is visited in the episode
+				if state not in seenStates:
+					# Append to list of returns for that state
+					returns[state].append(G)
+					# Update the value function as the expectation of reward from that state
+					V[state] = np.mean(returns[state])
+					seenStates.add(state)
+		elif mode == "every_visit":
+			for state,G in cumRewards:
+				# "Every-visit" evaluation - update rewards and calculate the value function
+				# every time we visit
 				# Append to list of returns for that state
 				returns[state].append(G)
 				# Update the value function as the expectation of reward from that state
 				V[state] = np.mean(returns[state])
 				seenStates.add(state)
+
 
 
 	print("Final Values:")
@@ -125,4 +142,7 @@ if __name__ == "__main__":
 	print("Rewards:")
 	print_values(grid.rewards, grid)
 	policy = samplePolicy()
-	simulate_firstVisit(grid, policy, 100)
+	print("FIRST-VISIT RESULTS")
+	simulate(grid, policy, 100, "first_visit")
+	print("EVERY-VISIT RESULTS")
+	simulate(grid, policy, 100, "every_visit")
