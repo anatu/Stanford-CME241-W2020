@@ -62,20 +62,24 @@ def policy_rollout(grid, policy, mode):
 	# For TD we need to preserve memory of the individual rewards
 	elif mode == "td":
 		cumRewards = []	
+		test = []
 		firstEntry = True
 		# Iterate in reverse, i.e. from the end working back to the start
 		for state, reward in reversed(succAndReward):
+			test.append((state, reward))
 			# Ignore the terminal state, since it has no value function
 			if firstEntry:
 				firstEntry = False
+				continue
 			else:
 				# Store the individual rewards this time since they 
 				# for the basis of our TD target (along with the value function estimate)
 				# instead of the cumulative reward G.
-				cumRewards.append((state, reward))		
+				cumRewards.append((state, reward))	
 		cumRewards.reverse()
-
-
+		test.reverse()
+		cumRewards = test
+		
 	return cumRewards
 
 
@@ -166,6 +170,7 @@ def simulate_td(grid, policy, T):
 
 	# For TD method, our rewards are no longer the cumulative reward itself (G_t) 
 	# but instead the reward and discounted value-function at the next timestep (R_t+1 + gamma*V_t+1) 
+	alpha = 0.7
 	V = {}
 	returns = {}
 	states = grid.all_states()
@@ -190,13 +195,13 @@ def simulate_td(grid, policy, T):
 			sp, rp = rewards[i+1]
 
 			# Append the target metric to list of returns for that state
+			# and update the value function with the target error
 			try:
-				target = rp + gamma*V[sp]
+				target = alpha*(rp + gamma*V[sp] - V[s])
+				V[s] = V[s] + target
 			except KeyError:
-				target = rp 
-			returns[s].append(target)
-			# Update the value function as the expectation of reward from that state
-			V[s] = np.mean(returns[s])
+				target = alpha*rp 
+				V[s] = target
 
 
 	print("Final Values:")
