@@ -2,7 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from gridWorldGame import standard_grid, negative_grid,print_values, print_policy
+from gridWorld import standard_grid, negative_grid,print_values, print_policy
 
 # Initialize parameters
 tol = 1e-4
@@ -48,12 +48,12 @@ def policy_rollout(grid, policy):
 	# Initialize the agent
 	startState = (2,0)
 	grid.set_state(startState)
-	startAction = chooseRandomAction(policy[s])
+	action = chooseRandomAction(policy[s])
 
 	# Now our tuples are (s, a, r)
 	# Initialize memory with the starting state-action pair, and no reward
 	succActionReward = []
-	succActionReward.append((startState, startAction, 0))
+	succActionReward.append((startState, action, 0))
 
 
 	# FORWARD PASS
@@ -93,22 +93,82 @@ def policy_rollout(grid, policy):
 	return cumRewards
 
 
+def simulate_eg(grid, policy, T):
+
+	# Initialize the state-action value function Q(s,a) for all non-terminal
+	# state-action pairs (since terminal states by definition have no actions associated)
+	Q = dict()
+	returns = dict()
+	states = grid.all_states()
+	for state in states:
+		if state in grid.actions:
+			Q[state] = dict()
+			for action in actions:
+				Q[state][action] = 0
+				stateAction = (state, action)
+				returns[stateAction] = []
+		else:
+			pass
+
+	# Simulate over many cycles
+	for t in range(T):
+
+		# Roll out the policy for the given episode
+		results = policy_rollout(grid, policy)
+
+		seen_stateActions = set()
+
+		for state, action, cumReward in results:
+			# Pull the state-action pair from our episode history 
+			stateAction = (state, action)
+
+			# Check to see if this is not a state-action pair that we have seen previously
+			if stateAction not in seen_stateActions:
+				origQ = Q[state][action]
+				returns[stateAction].append(cumReward)
+				# Overwrite the Q-value with the empirically observed reward from
+				Q[state][action] = np.mean(returns[stateAction])
+				# Add to the list of seen state-action pairs
+				seen_stateActions.add(stateAction)
+
+		# Use the new information from the episode we have just run to perform
+		# policy improvement by choosing the action for each state as the one that maximizes
+		# the Q-value out of all possible actions from that state
+		optPolicy = dict()
+		for state in policy.keys():
+			maxAction, maxValue = maximizeOverDict(Q[state])
+			optPolicy[state] = maxAction
+
+
+	# We can also compute the optimal value function
+	# after we have optimized the policy based on the empirical state-value 
+	# function information we collected from running episodes
+	optValue = 	 dict()
+	for state in optPolicy.keys():
+		_, Vmax = maximizeOverDict(Q[state])
+		optValue[state] = Vmax
+			
+		return optPolicy, optValue
+
 if __name__ == "__main__":
 	grid = negative_grid(step_cost=-0.1)
 	# print rewards
 	print("rewards:")
 	print_values(grid.rewards, grid)
 
-	# state -> action
-	# initialize a random policy
+	# Initialize a random policy
 	policy = {}
 	for s in grid.actions.keys():
 	  policy[s] = np.random.choice(actions)
-	  
-	# initial policy
 	print("initial policy:")
 	print_policy(policy, grid)
 
+	# Optimize the policy using our MC approach
+	optPolicy, optValue = simulate_eg(grid, policy, 5000)
 
+	print("Final Value Function:")
+	print_values(optValue, grid)
 
+	print("Final Policy:")
+	print_policy(optPolicy, grid)
 
