@@ -134,21 +134,20 @@ def simulate_eg(grid, policy, T):
 		# Use the new information from the episode we have just run to perform
 		# policy improvement by choosing the action for each state as the one that maximizes
 		# the Q-value out of all possible actions from that state
-		optPolicy = dict()
 		for state in policy.keys():
 			maxAction, maxValue = maximizeOverDict(Q[state])
-			optPolicy[state] = maxAction
+			policy[state] = maxAction
 
 
 	# We can also compute the optimal value function
 	# after we have optimized the policy based on the empirical state-value 
 	# function information we collected from running episodes
-	optValue = 	 dict()
-	for state in optPolicy.keys():
+	optValue = dict()
+	for state in policy.keys():
 		_, Vmax = maximizeOverDict(Q[state])
 		optValue[state] = Vmax
 			
-		return optPolicy, optValue
+	return policy, optValue
 
 if __name__ == "__main__":
 	grid = negative_grid(step_cost=-0.1)

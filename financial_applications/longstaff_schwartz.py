@@ -101,7 +101,7 @@ if __name__ == "__main__":
     	Y = nonZeroPayoffs[:, 1]
     	reg = LinearRegression().fit(X,Y)
 
-
+        
     	
 
 
