@@ -101,7 +101,20 @@ if __name__ == "__main__":
     	Y = nonZeroPayoffs[:, 1]
     	reg = LinearRegression().fit(X,Y)
 
+        # Use the regression equation to calculate the continuation value 
+        regInput = np.hstack([prices, basisPrices])
+        contValue = reg.predict(regInput)
+
+        # Now make a new stack of relevant vectors for the option payoffs,
+        # as well as the continuation value, and create a mask to filter steps where
+        # payoff exceeds conditional expected continuation value 
+        stack2 = np.hstack([payoffs, contValue, payoffs > contValue])
+
+        # Mask out the rows which have a payoff of zero
+        stack2[stack2[:,0] == 0, 2] = 0
+
         
+
     	
 
 
