@@ -7,6 +7,51 @@ S = TypeVar('S')
 A = TypeVar('A')
 
 
+def isApproxEq(a: float, b: float) -> bool:
+	'''
+	Test if two values are approximately equivalent within some margin
+	of tolerance
+	'''
+	TOL = 1e-8
+	return abs(a-b) <= TOL
+
+def getStatesMRP(mrpData: Mapping[S, Mapping[S, Tuple[float, float]]]) -> Set[S]:
+	'''
+	Given an MRP dict, return all of the possible states as a set
+	'''
+	return set(mrpData.keys())
+
+def getTransitionsMRP(mrpData: Mapping[S, Mapping[S, Tuple[float, float]]])\
+						-> Mapping[S, Mapping[S, float]]:	
+	'''
+	Given an MRP dict, return a dict of non-negligibly probably transitions
+	as another dict
+	'''
+	transProbs = dict()
+	for state in mrpData.keys():
+		transProbs[state] = dict()
+		for succState in mrpData[state].keys():
+			prob, _ = mrpData[state][succState]
+			if not isApproxEq(prob, 0.0):
+				transProbs[state][succState] = prob
+	return transProbs 
+
+
+def getRewardsMRP(mrpData: Mapping[S, Mapping[S, Tuple[float, float]]])\
+						-> Mapping[S, float]:	
+	'''
+	Given an MRP dict, return a dict of rewards for each state-successor pair.
+	'''
+	rewards = dict()
+	for state in mrpData.keys():
+		rewards[state] = dict()
+		for succState in mrpData[state].keys():
+			reward, _ = mrpData[state][succState]
+			if not isApproxEq(reward, 0.0):
+				rewards[state][succState] = reward
+	return rewards 
+
+
 def getStates(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]])\
 						-> Set[S]:
 	'''
@@ -41,7 +86,6 @@ def getTransitions(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]
 	the transition probability dict by not storing transition probabilities 
 	which are at or near zero (based on some tolerance).
 	'''
-	TOL = 1e-8
 	transProbs = dict()
 	for state in mdpData.keys():
 		transProbs[state] = dict()
@@ -49,9 +93,28 @@ def getTransitions(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]
 			transProbs[state][stateAction] = dict()
 			for succState in mdpData[state][stateAction].keys():
 				prob, _ = mdpData[state][stateAction][succState]
-				if not (abs(prob-0.0) <= TOL):
+				if not isApproxEq(prob, 0.0):
 					transProbs[state][stateAction][succState] = prob
 	return transProbs
+
+def getRewards(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]]) \
+							-> Mapping[S, Mapping[A, Mapping[S, float]]]:
+	'''
+	Given an MDP dict, returns a dict which maps (state, action, successor)
+	triples to that unique triple's reward. Note that rewards are usually
+	unique to each state, but this is a more general representation
+	for cases where the action drives the reward (e.g. in cases where actions
+	have different "costs" framed as negative rewards)
+	'''
+	rewards = dict()
+	for state in mdpData.keys():
+		rewards[state] = dict()
+		for stateAction in mdpData[state].keys():
+			rewards[state][stateAction] = dict()
+			for succState in mdpData[state][stateAction].keys():
+				_, reward = mdpData[state][stateAction][succState]
+				rewards[state][stateAction][succState] = reward
+	return rewards
 
 
 def verifyActions(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]]) -> bool:
