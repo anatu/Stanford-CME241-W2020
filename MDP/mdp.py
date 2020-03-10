@@ -118,20 +118,12 @@ class MRP(Generic[S]):
         sink = self.get_sink_states()
         result = set()
         for s in sink:
+            print(self.rewards[s])
             _, rMax = mu.maximizeOverDict(self.rewards[s])
             if mu.isApproxEq(0.0, rMax):
                result.add(s)
         return result
 
-
-    def get_value_func_vec(self) -> np.ndarray:
-        """
-        This value func vec is only for the non-terminal states
-        taken from CME241 class code
-        """
-        return np.linalg.inv(
-            np.eye(len(self.nt_states_list)) - self.gamma * self.trans_matrix
-        ).dot(self.rewards_vec)
 
     def get_trans_matrix(self) -> np.ndarray:
         """
@@ -145,6 +137,9 @@ class MRP(Generic[S]):
                 if s in self.nt_states_list:
                     m[i, self.nt_states_list.index(s)] = d
         return m
+
+    # TODO: Implement Linear Solution for the Value Function np.matmul(np.linalg.inv(I-gamma*P),R)   
+    # where P is the transition prob matrix P(s,s') and R is the rewards matrix R(s,s')
 
 
 
@@ -170,8 +165,6 @@ class MDP(Generic[S,A]):
             raise ValueError("MDP actions not properly defined. Make sure that \
                 all states have at least one action associated to them")
 
-        # Store the raw data map
-        # self.mdpData = data
 
         # Store individual lists of relevant information
         self.gamma = gamma
@@ -181,6 +174,8 @@ class MDP(Generic[S,A]):
         self.transitions = mu.getTransitions(data)
         self.rewards = mu.getRewards(data)
 
+    # TODO: Fix this, there appears to be an issue with how the rewards transfer over
+    # Potentially just implement from scratch using https://towardsdatascience.com/reinforcement-learning-demystified-markov-decision-processes-part-1-bf00dda41690
     def getMRPFromPolicy(self, pol: Policy) -> MRP:
         '''
         Uses the provided policy to reduce the given MDP to an MRP by assigning 
@@ -239,35 +234,7 @@ class MDP(Generic[S,A]):
         # return {s for s in sink if mu.isApproxEq(r, 0.0) for _, r in self.rewards[s].items())}
 
 
-    def calculateV(self, pol: Policy)\
-            -> Mapping[S, float]:
-        '''
-        Helper method to calculate the state-action value function for this MDP
-        subject to a given policy.
-        Taken from CME241 class code
-        '''
-        mrp_obj = self.getMRPFromPolicy(pol)
-        value_func_vec = mrp_obj.get_value_func_vec()
-        nt_vf = {mrp_obj.nt_states_list[i]: value_func_vec[i]
-                 for i in range(len(mrp_obj.nt_states_list))}
-        t_vf = {s: 0. for s in self.terminal_states}
-        return {**nt_vf, **t_vf}
-
-
-
-    def calculateQ(self, pol: Policy)\
-            -> Mapping[S, Mapping[A, float]]:
-        '''
-        Helper method to calculate the optimal state-action value function using a
-        given policy on this MDP.
-        Taken from CME241 class code
-        '''
-        v_dict = self.calculateV(pol)
-        return {s: {a: r + self.gamma * sum(p * v_dict[s1] for s1, p in
-                                            self.transitions[s][a].items())
-                    for a, r in v.items()}
-                for s, v in self.rewards.items()}
-
+    # TODO: Implement helper methods to calculate V and Q based on the in-class code.
 
 
 if __name__ == "__main__":

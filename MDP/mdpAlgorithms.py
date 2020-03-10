@@ -119,8 +119,9 @@ if __name__ == "__main__":
     vi.solve(mdp)
     print(vi.V)
     print(vi.pi)
-    # print(mdp.calculateQ(vi.pi))
 
+    mrp = mdp.getMRPFromPolicy(vi.pi)
+    print(mrp.rewards)
 
 
 
