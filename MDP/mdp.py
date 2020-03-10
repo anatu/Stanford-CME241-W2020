@@ -8,7 +8,7 @@ which was adapted from the method learned in CS221.
 
 import collections, random
 import numpy as np
-from typing import TypeVar, Mapping, Set, Tuple, Generic, Sequence
+from typing import TypeVar, Mapping, Set, Tuple, Generic, Sequence, Callable, List
 import mdpUtils as mu
 
 '''
@@ -18,7 +18,24 @@ i.e. so we can see how states map to actions from the type declarations.
 '''
 S = TypeVar('S')
 A = TypeVar('A')
+# Custom type variables from class code
+VFType = Callable[[S], float]
+QFType = Callable[[S], Callable[[A], float]]
+PolicyType = Callable[[S], Callable[[int], Sequence[A]]]
 
+VFDictType = Mapping[S, float]
+QFDictType = Mapping[S, Mapping[A, float]]
+PolicyActDictType = Callable[[S], Mapping[A, float]]
+
+SSf = Mapping[S, Mapping[S, float]]
+SSTff = Mapping[S, Mapping[S, Tuple[float, float]]]
+STSff = Mapping[S, Tuple[Mapping[S, float], float]],
+SAf = Mapping[S, Mapping[A, float]]
+SASf = Mapping[S, Mapping[A, Mapping[S, float]]]
+SASTff = Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]]
+SATSff = Mapping[S, Mapping[A, Tuple[Mapping[S, float], float]]]
+
+FlattenedDict = List[Tuple[Tuple, float]]
 
 class Policy(Generic[S, A]):
     '''
@@ -77,19 +94,40 @@ class MRP(Generic[S]):
     that can be reached from each state, and probabilities / rewards for each.
     Note that an MDP + Policy reduces to an MRP (this reductive mapping is implemented
     in the MDP class)
+    Heavily adapted from CME241 class code for simplicity
     '''
     def __init__(self, mrpData: Mapping[S, Mapping[S, Tuple[float, float]]],
                 gamma: float) -> None:
         '''
         Constructor to assign input data to relevant object data structures
         '''
-        self.gamma = gamma 
+        # TODO: Time permitting, refactor this so the data cleanly maps into the relevant
+        # class member variables instead of lifting directly from the class code logic
+
+        # Load the SSTff data and create the FULL rewards matrix R(s,s')
+        # (From MRPRefined)
+        a1, fullRewards, a3 = self.split_info(mrpData)   
+        self.fullRewards = fullRewards 
+
+        # Reformat the data for computing other properties
+        # originally in MRP superclass from CME241 class code
+        newData = {k: (v, a3[k]) for k, v in a1.items()}
+        d1, d2 = mu.zip_dict_of_tuple(newData)
+
         self.states = mu.getStatesMRP(mrpData)
         self.transitions = mu.getTransitionsMRP(mrpData)
-        self.rewards = mu.getRewardsMRP(mrpData)
+        self.gamma: float = gamma 
+        self.rewards: Mapping[S, float] = d2
         self.terminal_states = self.get_terminal_states()
         self.nt_states_list = self.get_nt_states_list()
         self.trans_matrix = self.get_trans_matrix()
+        self.rewards_vec: np.ndarray = self.get_rewards_vec()
+
+    def split_info(self, info: SSTff) -> Tuple[SSf, SSf, Mapping[S, float]]:
+        d = {k: mu.zip_dict_of_tuple(v) for k, v in info.items()}
+        d1, d2 = mu.zip_dict_of_tuple(d)
+        d3 = {k: sum(np.prod(x) for x in v.values()) for k, v in info.items()}
+        return d1, d2, d3
 
 
     def get_sink_states(self) -> Set[S]:
@@ -113,17 +151,10 @@ class MRP(Generic[S]):
         '''
         Helper method to calculate all terminal states for a given MDP as a set.
         Terminal sates are sink states, but they have a reward of zero
-        Adapted from CME241 Class Code
-        '''
+        Taken from CME241 Class Code
+        '''        
         sink = self.get_sink_states()
-        result = set()
-        for s in sink:
-            print(self.rewards[s])
-            _, rMax = mu.maximizeOverDict(self.rewards[s])
-            if mu.isApproxEq(0.0, rMax):
-               result.add(s)
-        return result
-
+        return {s for s in sink if mu.isApproxEq(self.rewards[s], 0.0)}
 
     def get_trans_matrix(self) -> np.ndarray:
         """
@@ -138,8 +169,21 @@ class MRP(Generic[S]):
                     m[i, self.nt_states_list.index(s)] = d
         return m
 
-    # TODO: Implement Linear Solution for the Value Function np.matmul(np.linalg.inv(I-gamma*P),R)   
-    # where P is the transition prob matrix P(s,s') and R is the rewards matrix R(s,s')
+    def get_rewards_vec(self) -> np.ndarray:
+        """
+        This rewards vec is only for the non-terminal states
+        Taken from CME241 class code
+        """
+        return np.array([self.rewards[s] for s in self.nt_states_list])
+
+    def get_value_func_vec(self) -> np.ndarray:
+        """
+        This value func vec is only for the non-terminal states
+        Taken from CME241 class code
+        """
+        return np.linalg.inv(
+            np.eye(len(self.nt_states_list)) - self.gamma * self.trans_matrix
+        ).dot(self.rewards_vec)
 
 
 
@@ -173,9 +217,8 @@ class MDP(Generic[S,A]):
         self.actions = mu.getAllActions(self.sa_dict)
         self.transitions = mu.getTransitions(data)
         self.rewards = mu.getRewards(data)
+        self.terminal_states = self.get_terminal_states()
 
-    # TODO: Fix this, there appears to be an issue with how the rewards transfer over
-    # Potentially just implement from scratch using https://towardsdatascience.com/reinforcement-learning-demystified-markov-decision-processes-part-1-bf00dda41690
     def getMRPFromPolicy(self, pol: Policy) -> MRP:
         '''
         Uses the provided policy to reduce the given MDP to an MRP by assigning 
@@ -188,8 +231,8 @@ class MDP(Generic[S,A]):
         flat_exp_rewards = mu.merge_dicts(flat_rewards_refined, flat_transitions, lambda x, y: x * y)
         exp_rewards = mu.unflatten_sasf_dict(flat_exp_rewards)
 
-        tr = mu.mdp_rep_to_mrp_rep1(self.transitions, pol.polData)
-        rew_ref = mu.mdp_rep_to_mrp_rep1(
+        tr = mu.MDPDictToMRPDict(self.transitions, pol.polData)
+        rew_ref = mu.MDPDictToMRPDict(
             exp_rewards,
             pol.polData
         )
@@ -231,38 +274,84 @@ class MDP(Generic[S,A]):
             if mu.isApproxEq(0.0, rMax):
                 result.add(s)
         return result
-        # return {s for s in sink if mu.isApproxEq(r, 0.0) for _, r in self.rewards[s].items())}
 
 
-    # TODO: Implement helper methods to calculate V and Q based on the in-class code.
+    def get_value_func_dict(self, pol: Policy)\
+            -> Mapping[S, float]:
+        '''
+        Computes the state-value function V for each state
+        For the MDP given a policy
+        Taken from CME241 Class Code
+        '''
+        mrp_obj = self.getMRPFromPolicy(pol)
+        value_func_vec = mrp_obj.get_value_func_vec()
+        nt_vf = {mrp_obj.nt_states_list[i]: value_func_vec[i]
+                 for i in range(len(mrp_obj.nt_states_list))}
+        t_vf = {s: 0. for s in self.terminal_states}
+        return {**nt_vf, **t_vf}
+
+
+    def get_act_value_func_dict(self, pol: Policy)\
+            -> Mapping[S, Mapping[A, float]]:
+        '''
+        Computes the state-action value function Q for each state-action pair
+        For the MDP given a policy
+        Adapted from CME241 Class Code, fixed to provide more robust implementation
+        for T(s,a,s') and R(s,a,s') as per https://web.stanford.edu/class/archive/cs/cs221/cs221.1196/lectures/mdp2.pdf, page 5
+        '''
+        v_dict = self.get_value_func_dict(pol)
+
+        q_dict = dict()
+
+        for state, actDict in self.rewards.items():
+            q_dict[state] = dict()
+            for action, succDict in actDict.items():
+                succSum = 0
+                for succ, reward in succDict.items():
+                    prob = self.transitions[state][action][succ]
+                    succSum = succSum + prob*(reward + self.gamma*v_dict[succ])
+                q_dict[state][action] = succSum
+
+        return q_dict
 
 
 if __name__ == "__main__":
-    n = 10
-    # Test with lilypad problem from midterm
+    # MDP TEST
+    # n = 10
+    # # Test with lilypad problem from midterm
+    # data = {
+    #     i: {
+    #         'A': {
+    #             i - 1: (i / n, 0.),
+    #             i + 1: (1. - i / n, 1. if i == n - 1 else 0.)
+    #         },
+    #         'B': {
+    #             j: (1 / n, 1. if j == n else 0.)
+    #             for j in range(n + 1) if j != i
+    #         }
+    #     } for i in range(1, n)
+    # }
+    # # Transition probabilities for edge cases at i=0, i=n
+    # data[0] = {'A': {0: (1., 0.)}, 'B': {0: (1., 0.)}}
+    # data[n] = {'A': {n: (1., 0.)}, 'B': {n: (1., 0.)}}
+
+    # # Discount factor
+    # gamma = 1.0
+    # mdp = MDP(data, gamma)
+
+    # print(mdp.states)
+    # print(mdp.sa_dict)
+    # print(mdp.transitions)
+    # print(mdp.rewards)
+
+    # MRP TEST
     data = {
-        i: {
-            'A': {
-                i - 1: (i / n, 0.),
-                i + 1: (1. - i / n, 1. if i == n - 1 else 0.)
-            },
-            'B': {
-                j: (1 / n, 1. if j == n else 0.)
-                for j in range(n + 1) if j != i
-            }
-        } for i in range(1, n)
+        1: {1: (0.3, 9.2), 2: (0.6, 3.4), 3: (0.1, -0.3)},
+        2: {1: (0.4, 0.0), 2: (0.2, 8.9), 3: (0.4, 3.5)},
+        3: {3: (1.0, 0.0)}
     }
-    # Transition probabilities for edge cases at i=0, i=n
-    data[0] = {'A': {0: (1., 0.)}, 'B': {0: (1., 0.)}}
-    data[n] = {'A': {n: (1., 0.)}, 'B': {n: (1., 0.)}}
-
-    # Discount factor
-    gamma = 1.0
-    mdp = MDP(data, gamma)
-
-    print(mdp.states)
-    print(mdp.sa_dict)
-    print(mdp.transitions)
-    print(mdp.rewards)
+    mrp_refined_obj = MRP(data, 0.95)
+    print(mrp_refined_obj.trans_matrix)
+    print(mrp_refined_obj.rewards_vec)
 
 

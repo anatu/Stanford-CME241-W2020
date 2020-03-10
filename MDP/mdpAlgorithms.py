@@ -118,10 +118,8 @@ if __name__ == "__main__":
     vi = ValueIteration(tol = 1e-8)
     vi.solve(mdp)
     print(vi.V)
-    print(vi.pi)
+    print(mdp.get_act_value_func_dict(vi.pi))
 
-    mrp = mdp.getMRPFromPolicy(vi.pi)
-    print(mrp.rewards)
 
 
 

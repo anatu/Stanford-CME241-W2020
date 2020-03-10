@@ -6,6 +6,8 @@ from typing import TypeVar, Mapping, Set, Tuple, Generic, Sequence, Callable, Li
 S = TypeVar('S')
 A = TypeVar('A')
 X = TypeVar('X')
+Y = TypeVar('Y')
+Z = TypeVar('Z')
 
 
 # Custom type variables from class code
@@ -98,6 +100,12 @@ def mdp_rep_to_mrp_rep1(
             for s, v in mdp_rep.items()}
 
 
+def zip_dict_of_tuple(d: Mapping[X, Tuple[Y, Z]])\
+        -> Tuple[Mapping[X, Y], Mapping[X, Z]]:
+    d1 = {k: v1 for k, (v1, _) in d.items()}
+    d2 = {k: v2 for k, (_, v2) in d.items()}
+    return d1, d2
+
 ######################################################
 ######################################################
 
@@ -170,7 +178,7 @@ def MDPDictToMRPDict(mdpData: Mapping[S, Mapping[A, Mapping[S, float]]],
 		for act, prob in polActs.items():
 			succDict = actDict[act]
 			worker = dict()
-			for succState, reward in succDict:
+			for succState, reward in succDict.items():
 				# Calculate the contribution to the value of the successor
 				# state from that given state-action pair
 				worker[succState] = reward*prob
