@@ -31,7 +31,7 @@ class ValueIteration(MDPAlgorithm):
 	calculated), and repeat until convergence of the value function vector. 
 
 	'''
-	def __init__(self, tol: float):
+	def __init__(self, tol: float) -> None:
 		# Set the convergence tolerance for the algorithm
 		self.tol = tol
 
@@ -69,7 +69,7 @@ class ValueIteration(MDPAlgorithm):
 					for succState in mdp.rewards[state][action].keys():
 						P_sas = mdp.transitions[state][action][succState]
 						R_sas = mdp.rewards[state][action][succState]						
-						Vi = Vi + P_sas*(R_sas + self.V[succState])
+						Vi = Vi + P_sas*(R_sas + mdp.gamma*self.V[succState])
 					# Append the value-function for that action to the list
 					V_cands[action] = Vi
 
@@ -90,6 +90,57 @@ class ValueIteration(MDPAlgorithm):
 		return None
 
 
+class PolicyIteration(MDPAlgorithm):
+
+
+	def solve(self, mdp: MDP) -> None:
+		# Initialize the value-function and policy
+		# We will initialize equal probabilities for the policy
+		# and all zeros for the value function
+		self.V = dict()
+		policy = dict()
+		for state in mdp.sa_dict.keys():
+			self.V[state] = 0
+			policy[state] = dict()
+			for action in mdp.sa_dict[state]:
+				policy[state][action] = 1/len(mdp.sa_dict[state])
+
+
+		while True:
+
+			# Store the policy from the last iteration
+			lastPol = policy
+
+			# Policy Evaluation: Use the policy to compute V
+			for state in mdp.states:
+				Vi = 0
+				for action, aProb in lastPol[state].items():
+					for succState in mdp.rewards[state][action].keys():						
+						P_sas = mdp.transitions[state][action][succState]
+						R_sas = mdp.rewards[state][action][succState]						
+						Vi = Vi + aProb*P_sas*(R_sas + mdp.gamma*self.V[succState])
+				self.V[state] = Vi
+
+			# Policy Improvement: Argmax over the value functions for each action and assign this to the new policy
+			policy = dict()
+			for state in mdp.states:
+				policy[state] = dict()  					
+				V_cands = dict()
+				for action in mdp.sa_dict[state]:
+					Vi = 0
+					for succState in mdp.rewards[state][action].keys():						
+						P_sas = mdp.transitions[state][action][succState]
+						R_sas = mdp.rewards[state][action][succState]	
+						Vi = Vi + P_sas*(R_sas + mdp.gamma*self.V[succState])
+					V_cands[action] = Vi
+				aOpt, vOpt = mu.maximizeOverDict(V_cands)
+				policy[state][aOpt] = 1.
+
+			self.pi = Policy(policy)
+
+			# Check convergence criteria
+			if self.pi.polData == lastPol:
+				break
 
 
 if __name__ == "__main__":
@@ -117,10 +168,10 @@ if __name__ == "__main__":
 
     vi = ValueIteration(tol = 1e-8)
     vi.solve(mdp)
-    print(vi.V)
+    # print(vi.V)
+
+    pi = PolicyIteration()
+    pi.solve(mdp)
+    print(pi.pi)
     print(mdp.get_act_value_func_dict(vi.pi))
-
-
-
-
 

@@ -75,6 +75,27 @@ class Policy(Generic[S, A]):
         '''
         return self.getStateProbs(state).get(action, 0.0)
 
+
+    def assign(self, state: S, action: A, prob: float) -> None:
+        '''
+        Helper method to assign a probability to a given state-action pair within the policy
+        '''
+        self.polData[state][action] = prob
+
+
+    def assignDet(self, state: S, setAction: A) -> None:
+        '''
+        Helper method to deterministically assign an action to a given state
+        (i.e. assigns a probability of 1 to that action and sets probability of all other actions to zero),
+        helpful when using iterative methods
+        '''
+        for act in self.polData[state].keys():
+            if act == setAction:
+                self.polData[state][act] = 1.
+            else:
+                self.polData[state][act] = 0.
+
+
     def __repr__(self):
         '''
         Helper function to print out policy data when print is called instead of an object reference
@@ -218,6 +239,7 @@ class MDP(Generic[S,A]):
         self.transitions = mu.getTransitions(data)
         self.rewards = mu.getRewards(data)
         self.terminal_states = self.get_terminal_states()
+
 
     def getMRPFromPolicy(self, pol: Policy) -> MRP:
         '''
