@@ -2,9 +2,72 @@
 Utility file which contains helper functions that we will use both in our definitions
 of MDP data structures as well sa in the algorithms we use to solve them.
 '''
-from typing import TypeVar, Mapping, Set, Tuple, Generic
+from typing import TypeVar, Mapping, Set, Tuple, Generic, Sequence, Callable, List
 S = TypeVar('S')
 A = TypeVar('A')
+X = TypeVar('X')
+
+
+# Custom type variables from class code
+VFType = Callable[[S], float]
+QFType = Callable[[S], Callable[[A], float]]
+PolicyType = Callable[[S], Callable[[int], Sequence[A]]]
+
+VFDictType = Mapping[S, float]
+QFDictType = Mapping[S, Mapping[A, float]]
+PolicyActDictType = Callable[[S], Mapping[A, float]]
+
+SSf = Mapping[S, Mapping[S, float]]
+SSTff = Mapping[S, Mapping[S, Tuple[float, float]]]
+STSff = Mapping[S, Tuple[Mapping[S, float], float]],
+SAf = Mapping[S, Mapping[A, float]]
+SASf = Mapping[S, Mapping[A, Mapping[S, float]]]
+SASTff = Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]]
+SATSff = Mapping[S, Mapping[A, Tuple[Mapping[S, float], float]]]
+
+FlattenedDict = List[Tuple[Tuple, float]]
+
+
+######################################################
+######################################################
+'''
+UTILITY FUNCTIONS AND TYPE VARIABLES FROM CME241 CLASS CODE
+'''
+def sum_dicts(dicts: Sequence[Mapping[X, float]]) -> Mapping[X, float]:
+    return {k: sum(d.get(k, 0) for d in dicts)
+            for k in set.union(*[set(d1) for d1 in dicts])}
+
+def flatten_sasf_dict(sasf: SASf) -> FlattenedDict:
+    return [((s, a, s1), f)
+            for s, asf in sasf.items()
+            for a, sf in asf.items()
+            for s1, f in sf.items()]
+
+
+def flatten_ssf_dict(ssf: SSf) -> FlattenedDict:
+    return [((s, s1), f)
+            for s, sf in ssf.items()
+            for s1, f in sf.items()]
+
+
+def unflatten_sasf_dict(q: FlattenedDict) -> SASf:
+    dsasf = {}
+    for (sas, f) in q:
+        dasf = dsasf.get(sas[0], {})
+        dsf = dasf.get(sas[1], {})
+        dsf[sas[2]] = f
+        dasf[sas[1]] = dsf
+        dsasf[sas[0]] = dasf
+    return dsasf
+
+
+def unflatten_ssf_dict(q: FlattenedDict) -> SSf:
+    dssf = {}
+    for (ss, f) in q:
+        dsf = dssf.get(ss[0], {})
+        dsf[ss[1]] = f
+        dssf[ss[0]] = dsf
+    return dssf
 
 
 def isApproxEq(a: float, b: float) -> bool:
@@ -14,6 +77,21 @@ def isApproxEq(a: float, b: float) -> bool:
 	'''
 	TOL = 1e-8
 	return abs(a-b) <= TOL
+
+def merge_dicts(d1: List[Tuple[Tuple, float]], 
+				d2: List[Tuple[Tuple, float]], operation):
+    merged = d1 + d2
+    from itertools import groupby
+    from operator import itemgetter
+    from functools import reduce
+    sortd = sorted(merged, key=itemgetter(0))
+    grouped = groupby(sortd, key=itemgetter(0))
+    return [(key, reduce(operation, [x for _, x in group])) for key, group in grouped]
+
+
+######################################################
+######################################################
+
 
 def getStatesMRP(mrpData: Mapping[S, Mapping[S, Tuple[float, float]]]) -> Set[S]:
 	'''
@@ -51,6 +129,36 @@ def getRewardsMRP(mrpData: Mapping[S, Mapping[S, Tuple[float, float]]])\
 				rewards[state][succState] = reward
 	return rewards 
 
+
+def MDPDictToMRPDict(mdpData: Mapping[S, Mapping[A, Mapping[S, float]]],
+					polData: Mapping[S, Mapping[A, float]]) -> Mapping[S, Mapping[S, float]]:
+	'''
+	Accepts a set of either T(s,a,s') or R(s,a,s') values represented in a dict
+	(i.e. either the transition probabilities or rewards) and a policy, and applies
+	the policy to return the MRP-reduced version (i.e. to prescribe out the 
+	action dependence so we have T(s,s') and R(s,s')).
+	Adapted from CME241 class code 
+	'''
+	mrpData = dict()
+	# Iterate through each state in the MDP
+	for state, actDict in mdpData.items():
+		sumDicts = []
+		# Pull the possible actions in this state from the policy
+		polActs = polData[state]
+		for act, prob in polActs.items():
+			succDict = actDict[act]
+			worker = dict()
+			for succState, reward in succDict:
+				# Calculate the contribution to the value of the successor
+				# state from that given state-action pair
+				worker[succState] = reward*prob
+			sumDicts.append(worker)
+		# Sum the dicts we get from all possible actions prescribed by the policy
+		# so we end up with a dict with the expected value of all the successor
+		# states reachable from the given state
+		mrpData[state] = sum_dicts(sumDicts)
+
+	return mrpData
 
 def getStates(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]])\
 						-> Set[S]:

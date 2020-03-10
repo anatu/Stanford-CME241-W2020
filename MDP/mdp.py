@@ -102,7 +102,28 @@ class MDPV2(Generic[S,A]):
         self.transitions = mu.getTransitions(data)
         self.rewards = mu.getRewards(data)
 
-    # def getMRPFromPolicy(self, pol: Policy) -> MRP:
+    def getMRPFromPolicy(self, pol: Policy) -> MRP:
+        '''
+        Uses the provided policy to reduce the given MDP to an MRP by assigning 
+        out the actions in the problem based on what is prescribed by the policy.
+        Taken directly from CME241 class code
+        '''
+        flat_transitions = flatten_sasf_dict(self.transitions)
+        flat_rewards_refined = flatten_sasf_dict(self.rewards_refined)
+
+        flat_exp_rewards = merge_dicts(flat_rewards_refined, flat_transitions, lambda x, y: x * y)
+        exp_rewards = unflatten_sasf_dict(flat_exp_rewards)
+
+        tr = mdp_rep_to_mrp_rep1(self.transitions, pol.policy_data)
+        rew_ref = mdp_rep_to_mrp_rep1(
+            exp_rewards,
+            pol.policy_data
+        )
+        flat_tr = flatten_ssf_dict(tr)
+        flat_rew_ref = flatten_ssf_dict(rew_ref)
+        flat_norm_rewards = merge_dicts(flat_rew_ref, flat_tr, lambda x, y: x / y)
+        norm_rewards = unflatten_ssf_dict(flat_norm_rewards)
+
 
 
 if __name__ == "__main__":
