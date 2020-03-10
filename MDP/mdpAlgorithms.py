@@ -91,7 +91,13 @@ class ValueIteration(MDPAlgorithm):
 
 
 class PolicyIteration(MDPAlgorithm):
-
+	'''
+	Algorithm for solving an MDP using policy iteration. Similar to value iteration
+	except the steps and convergence criterion are opposite. We initialize a guess policy,
+	roll it out to calculate the value function, then improve the policy iteratively by biasing
+	towards actions that yield the highest value function. We break when the policy stops improving,
+	and the value function resulting from this rollout should be optimal as well
+	'''
 
 	def solve(self, mdp: MDP) -> None:
 		# Initialize the value-function and policy
@@ -100,10 +106,15 @@ class PolicyIteration(MDPAlgorithm):
 		self.V = dict()
 		policy = dict()
 		for state in mdp.sa_dict.keys():
-			self.V[state] = 0
+			self.V[state] = 0.5
 			policy[state] = dict()
 			for action in mdp.sa_dict[state]:
 				policy[state][action] = 1/len(mdp.sa_dict[state])
+
+		# Set the terminal-state value function entries to zero
+		termStates = mdp.get_terminal_states()
+		for ts in termStates:
+			self.V[ts] = 0
 
 
 		while True:
@@ -168,10 +179,9 @@ if __name__ == "__main__":
 
     vi = ValueIteration(tol = 1e-8)
     vi.solve(mdp)
-    # print(vi.V)
+    print(vi.V)
 
     pi = PolicyIteration()
     pi.solve(mdp)
-    print(pi.pi)
-    print(mdp.get_act_value_func_dict(vi.pi))
+    print(pi.V)
 
