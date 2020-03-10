@@ -89,6 +89,15 @@ def merge_dicts(d1: List[Tuple[Tuple, float]],
     return [(key, reduce(operation, [x for _, x in group])) for key, group in grouped]
 
 
+def mdp_rep_to_mrp_rep1(
+    mdp_rep: SASf,
+    policy_rep: SAf
+) -> SSf:
+    return {s: sum_dicts([{s1: p * v2 for s1, v2 in v[a].items()}
+                          for a, p in policy_rep[s].items()])
+            for s, v in mdp_rep.items()}
+
+
 ######################################################
 ######################################################
 

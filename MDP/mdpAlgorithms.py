@@ -93,7 +93,7 @@ class ValueIteration(MDPAlgorithm):
 
 
 if __name__ == "__main__":
-    n = 25
+    n = 10
     # Test with lilypad problem from midterm
     data = {
         i: {
@@ -119,6 +119,7 @@ if __name__ == "__main__":
     vi.solve(mdp)
     print(vi.V)
     print(vi.pi)
+    # print(mdp.calculateQ(vi.pi))
 
 
 

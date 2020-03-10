@@ -8,7 +8,7 @@ which was adapted from the method learned in CS221.
 
 import collections, random
 import numpy as np
-from typing import TypeVar, Mapping, Set, Tuple, Generic
+from typing import TypeVar, Mapping, Set, Tuple, Generic, Sequence
 import mdpUtils as mu
 
 '''
@@ -83,9 +83,69 @@ class MRP(Generic[S]):
         '''
         Constructor to assign input data to relevant object data structures
         '''
-        self.states = mu.getStatesMRP()
-        self.transitions = mu.getTransitionsMRP()
-        self.rewards = mu.getRewardsMRP()
+        self.gamma = gamma 
+        self.states = mu.getStatesMRP(mrpData)
+        self.transitions = mu.getTransitionsMRP(mrpData)
+        self.rewards = mu.getRewardsMRP(mrpData)
+        self.terminal_states = self.get_terminal_states()
+        self.nt_states_list = self.get_nt_states_list()
+        self.trans_matrix = self.get_trans_matrix()
+
+
+    def get_sink_states(self) -> Set[S]:
+        '''
+        Retrieves all sink states for the MRP
+        Taken from CME241 class code
+        '''
+        return {k for k, v in self.transitions.items()
+                if len(v) == 1 and k in v.keys()}
+
+
+    def get_nt_states_list(self) -> Sequence[S]:
+        '''
+        Retrieves all non-terminal states for the MRP
+        Taken from CME241 class code
+        '''
+        return [s for s in self.states
+                if s not in self.terminal_states]
+
+    def get_terminal_states(self) -> Set[S]:
+        '''
+        Helper method to calculate all terminal states for a given MDP as a set.
+        Terminal sates are sink states, but they have a reward of zero
+        Adapted from CME241 Class Code
+        '''
+        sink = self.get_sink_states()
+        result = set()
+        for s in sink:
+            _, rMax = mu.maximizeOverDict(self.rewards[s])
+            if mu.isApproxEq(0.0, rMax):
+               result.add(s)
+        return result
+
+
+    def get_value_func_vec(self) -> np.ndarray:
+        """
+        This value func vec is only for the non-terminal states
+        taken from CME241 class code
+        """
+        return np.linalg.inv(
+            np.eye(len(self.nt_states_list)) - self.gamma * self.trans_matrix
+        ).dot(self.rewards_vec)
+
+    def get_trans_matrix(self) -> np.ndarray:
+        """
+        This transition matrix is only for the non-terminal states
+        Taken from CME241 class code
+        """
+        n = len(self.nt_states_list)
+        m = np.zeros((n, n))
+        for i in range(n):
+            for s, d in self.transitions[self.nt_states_list[i]].items():
+                if s in self.nt_states_list:
+                    m[i, self.nt_states_list.index(s)] = d
+        return m
+
 
 
 class MDP(Generic[S,A]):
@@ -127,21 +187,28 @@ class MDP(Generic[S,A]):
         out the actions in the problem based on what is prescribed by the policy.
         Taken directly from CME241 class code
         '''
-        flat_transitions = flatten_sasf_dict(self.transitions)
-        flat_rewards_refined = flatten_sasf_dict(self.rewards_refined)
+        flat_transitions = mu.flatten_sasf_dict(self.transitions)
+        flat_rewards_refined = mu.flatten_sasf_dict(self.rewards)
 
-        flat_exp_rewards = merge_dicts(flat_rewards_refined, flat_transitions, lambda x, y: x * y)
-        exp_rewards = unflatten_sasf_dict(flat_exp_rewards)
+        flat_exp_rewards = mu.merge_dicts(flat_rewards_refined, flat_transitions, lambda x, y: x * y)
+        exp_rewards = mu.unflatten_sasf_dict(flat_exp_rewards)
 
-        tr = mdp_rep_to_mrp_rep1(self.transitions, pol.policy_data)
-        rew_ref = mdp_rep_to_mrp_rep1(
+        tr = mu.mdp_rep_to_mrp_rep1(self.transitions, pol.polData)
+        rew_ref = mu.mdp_rep_to_mrp_rep1(
             exp_rewards,
-            pol.policy_data
+            pol.polData
         )
-        flat_tr = flatten_ssf_dict(tr)
-        flat_rew_ref = flatten_ssf_dict(rew_ref)
-        flat_norm_rewards = merge_dicts(flat_rew_ref, flat_tr, lambda x, y: x / y)
-        norm_rewards = unflatten_ssf_dict(flat_norm_rewards)
+        flat_tr = mu.flatten_ssf_dict(tr)
+        flat_rew_ref = mu.flatten_ssf_dict(rew_ref)
+        flat_norm_rewards = mu.merge_dicts(flat_rew_ref, flat_tr, lambda x, y: x / y)
+        norm_rewards = mu.unflatten_ssf_dict(flat_norm_rewards)
+
+        return MRP(
+            {s: {s1: (v1, norm_rewards[s][s1]) for s1, v1 in v.items()}
+             for s, v in tr.items()},
+            self.gamma
+        )
+
 
 
     def get_sink_states(self) -> Set[S]:
@@ -170,6 +237,37 @@ class MDP(Generic[S,A]):
                 result.add(s)
         return result
         # return {s for s in sink if mu.isApproxEq(r, 0.0) for _, r in self.rewards[s].items())}
+
+
+    def calculateV(self, pol: Policy)\
+            -> Mapping[S, float]:
+        '''
+        Helper method to calculate the state-action value function for this MDP
+        subject to a given policy.
+        Taken from CME241 class code
+        '''
+        mrp_obj = self.getMRPFromPolicy(pol)
+        value_func_vec = mrp_obj.get_value_func_vec()
+        nt_vf = {mrp_obj.nt_states_list[i]: value_func_vec[i]
+                 for i in range(len(mrp_obj.nt_states_list))}
+        t_vf = {s: 0. for s in self.terminal_states}
+        return {**nt_vf, **t_vf}
+
+
+
+    def calculateQ(self, pol: Policy)\
+            -> Mapping[S, Mapping[A, float]]:
+        '''
+        Helper method to calculate the optimal state-action value function using a
+        given policy on this MDP.
+        Taken from CME241 class code
+        '''
+        v_dict = self.calculateV(pol)
+        return {s: {a: r + self.gamma * sum(p * v_dict[s1] for s1, p in
+                                            self.transitions[s][a].items())
+                    for a, r in v.items()}
+                for s, v in self.rewards.items()}
+
 
 
 if __name__ == "__main__":
