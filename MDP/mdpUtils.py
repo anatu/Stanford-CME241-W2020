@@ -2,7 +2,7 @@
 Utility file which contains helper functions that we will use both in our definitions
 of MDP data structures as well sa in the algorithms we use to solve them.
 '''
-from typing import TypeVar, Mapping, Set, Tuple, Generic, Sequence, Callable, List
+from typing import TypeVar, Mapping, Set, Tuple, Generic, Sequence, Callable, List, Any
 S = TypeVar('S')
 A = TypeVar('A')
 X = TypeVar('X')
@@ -92,6 +92,19 @@ def merge_dicts(d1: List[Tuple[Tuple, float]],
 ######################################################
 ######################################################
 
+def maximizeOverDict(data: Mapping[Any, float]):
+  '''
+  Utility function to maximize over a dict with
+  '''
+  max_key = None
+  max_val = float('-inf')
+  for k, v in data.items():
+    if v > max_val:
+      max_val = v
+      max_key = k
+  return max_key, max_val
+
+
 
 def getStatesMRP(mrpData: Mapping[S, Mapping[S, Tuple[float, float]]]) -> Set[S]:
 	'''
@@ -167,16 +180,6 @@ def getStates(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]])\
 	'''
 	return set(mdpData.keys())
 
-def getActions(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]]) \
-						-> Set[S]:
-	'''
-	Given an MDP dict, return all of the possible actions defined by that MDP as a set.
-	'''
-	actions = set()
-	for state in mdpData.keys():
-		for stateAction in mdpData[state].keys():
-			actions.add(stateAction)
-	return actions
 
 def getStateActDict(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]]) \
 						-> Mapping[S, Set[A]]:
@@ -185,6 +188,18 @@ def getStateActDict(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float
 	to the actions that can be taken from each state, as a set
 	'''
 	return {state: set(action.keys()) for state, action in mdpData.items()}
+
+
+def getAllActions(stateActDict: Mapping[S, Set[A]]) -> Set[S]:
+	'''
+	Given an MDP state-action dict calculated by getStateActDict, return all of the possible actions defined by that MDP as a set.
+	'''
+	actions = set()
+	for state in stateActDict.keys():
+		for stateAction in stateActDict[state]:
+			actions.add(stateAction)
+	return actions
+
 
 def getTransitions(mdpData: Mapping[S, Mapping[A, Mapping[S, Tuple[float, float]]]]) \
 							-> Mapping[S, Mapping[A, Mapping[S, float]]]:

@@ -9,7 +9,7 @@ which was adapted from the method learned in CS221.
 import collections, random
 import numpy as np
 from typing import TypeVar, Mapping, Set, Tuple, Generic
-import mdp_utils as mu
+import mdpUtils as mu
 
 '''
 Custom type variables to be used in defining our data structures. These are
@@ -25,6 +25,8 @@ class Policy(Generic[S, A]):
     Generic data structure for a policy. The policy is a nested dict where
     the top-level dict maps states to various actions, and the lower-level dicts
     map actions to probabilities of taking that action (i.e. a stochastic policy).
+    if the policy is deterministic (e.g. for an optimal policy), then each state key will only
+    have a single action beneath it with a probability of 1.
     '''
     def __init__(self, 
                 polData: Mapping[S, Mapping[A, float]]) -> None:
@@ -51,10 +53,22 @@ class Policy(Generic[S, A]):
         '''
         Pulls the probability of the policy taking a particular state-action pair
         and returns zero if that action is never prescribed for that state.
-        Using this function means a policy can only specify actions with 
-        at each state 
+        Using this function means we can write deterministic policies without having to define
+        a bunch of zeros for all the other states 
         '''
         return self.getStateProbs(state).get(action, 0.0)
+
+    def __repr__(self):
+        '''
+        Helper function to print out policy data when print is called instead of an object reference
+        '''
+        return self.polData.__repr__()
+
+    def __str__(self):
+        '''
+        Helper function to print out policy data when print is called instead of an object reference
+        '''
+        return self.polData.__str__()
 
 
 class MRP(Generic[S]):
@@ -74,7 +88,7 @@ class MRP(Generic[S]):
         self.rewards = mu.getRewardsMRP()
 
 
-class MDPV2(Generic[S,A]):
+class MDP(Generic[S,A]):
     '''
     Generic data structure for an MDP. The MDP consists
     of states, actions to be taken at each state, and successor states.
@@ -96,9 +110,14 @@ class MDPV2(Generic[S,A]):
             raise ValueError("MDP actions not properly defined. Make sure that \
                 all states have at least one action associated to them")
 
+        # Store the raw data map
+        # self.mdpData = data
+
+        # Store individual lists of relevant information
         self.gamma = gamma
         self.states = mu.getStates(data)
-        self.actions = mu.getActions(data)
+        self.sa_dict = mu.getStateActDict(data)
+        self.actions = mu.getAllActions(self.sa_dict)
         self.transitions = mu.getTransitions(data)
         self.rewards = mu.getRewards(data)
 
@@ -147,10 +166,10 @@ if __name__ == "__main__":
 
     # Discount factor
     gamma = 1.0
-    mdp = MDPV2(data, gamma)
+    mdp = MDP(data, gamma)
 
     print(mdp.states)
-    print(mdp.actions)
+    print(mdp.sa_dict)
     print(mdp.transitions)
     print(mdp.rewards)
 
