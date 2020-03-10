@@ -144,6 +144,33 @@ class MDP(Generic[S,A]):
         norm_rewards = unflatten_ssf_dict(flat_norm_rewards)
 
 
+    def get_sink_states(self) -> Set[S]:
+        '''
+        Helper method to get all sink states for the given MDP as a set.
+        We consider sink states ones which have only one possible transition, which is back to itself.
+        From CME241 Class Code
+        '''
+        return {k for k, v in self.transitions.items() if
+                all(len(v1) == 1 and k in v1.keys() for _, v1 in v.items())
+                }
+
+
+    def get_terminal_states(self) -> Set[S]:
+        '''
+        Helper method to calculate all terminal states for a given MDP as a set.
+        Terminal sates are sink states, but they have a reward of zero
+        Adapted from CME241 Class Code
+        '''
+        sink = self.get_sink_states()
+        result = set()
+        for s in sink:
+            for act in self.rewards[s].keys():
+                _, rMax = mu.maximizeOverDict(self.rewards[s][act])
+            if mu.isApproxEq(0.0, rMax):
+                result.add(s)
+        return result
+        # return {s for s in sink if mu.isApproxEq(r, 0.0) for _, r in self.rewards[s].items())}
+
 
 if __name__ == "__main__":
     n = 10

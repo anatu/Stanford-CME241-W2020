@@ -45,6 +45,10 @@ class ValueIteration(MDPAlgorithm):
 			self.V[state] = 0.5
 			polData[state] = dict()
 
+		# Set the terminal-state value function entries to zero
+		termStates = mdp.get_terminal_states()
+		for ts in termStates:
+			self.V[ts] = 0
 
 		# Inflate the convergence epsilon to start so we can enter the while loop
 		eps = self.tol*1e4
@@ -89,7 +93,7 @@ class ValueIteration(MDPAlgorithm):
 
 
 if __name__ == "__main__":
-    n = 10
+    n = 25
     # Test with lilypad problem from midterm
     data = {
         i: {
