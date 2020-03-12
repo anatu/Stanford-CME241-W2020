@@ -7,6 +7,9 @@ sys.path.append('../')
 from MDP import util
 
 # Math adapted from https://www.investopedia.com/terms/b/blackscholes.asp
+# https://medium.com/swlh/black-scholes-algorithmic-delta-hedging-c2cdd42ce175
+
+
 '''
 Model for pricing and hedging of derivatives in complete and incomplete markets
 The complete market assumption means no transaction costs, and a price for every asset (i.e. one can always transact
