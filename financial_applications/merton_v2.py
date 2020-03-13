@@ -115,10 +115,24 @@ class MertonProblem():
                 states.add((w, t))
 
         # Now, discretize / define the action space using some finite discretization
-        # step size similar to the above. 
-        aStep = 0.01
-        for a in range(0, 1, aStep):
-            actions.add(a)
+        # step size similar to the above. Our actions consist of pi (the fractional
+        # allocation among risky / riskless assets) and c (the fraction of our existing
+        # wealth we want to invest at that time step).
+        # NOTE: Here for pi we are making the simplifying assumption that Pi is the fraction
+        # allocated to the risky assets, i.e. if there is more than 1 risky asset it will split
+        # equally among all of them
+        piStep = 0.01
+        cStep = 0.01
+        for pi in range(0, 1, piStep):
+            for c in range(0, 1, cStep):
+                actions.add((pi,c))
+
+        # Fill out the dict with our discretized state- and action-spaces. 
+        
+
+        # Now we must model rewards for each possible successor state.
+        # Reward per unit time is given by U(c_t), i.e. the utility
+        # of the amount that we consume
 
 
 
