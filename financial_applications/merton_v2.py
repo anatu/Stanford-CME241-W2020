@@ -37,13 +37,16 @@ class MertonProblem():
        ''' 
        self.T: float = T # Expiry value
        self.rho: float = rho # Discount rate
-
        self.r: float = r # Riskless rate (return for the riskless asset)
+
+       self.W0: float = W0 # Initial wealth
        self.mu: np.ndarray = mu # Means of the risky rate (1-D array of length = # of Risky Assets)
        self.cov: np.ndarray = cov # Risky rate covariants (2-D square array of length = # of Risky Assets)
 
        self.epsilon: float = epsilon # Bequest parameter for B(T)
        self.gamma: float = gamma # Parameter for CRRA utility function
+
+       self.SIM_TIME = SIM_TIME # Total simulation time
 
     def utilityFunc(self, x: float) -> float:
         '''
@@ -92,6 +95,30 @@ class MertonProblem():
         return optCons
 
 
+    def makeDiscretizedMDP(self) -> MDP:
+        '''
+        Takes the information prescribed for this Merton object
+        and builds an MDP out of it.
+        '''
+        mdpData = dict()
+        states = set()
+        actions = set()
+
+        # First, define the set of states. We will form an upper bound on wealth as start wealth + 5X stdev of the risky asset
+        # over the course of the simulation time. Choose a step size to discretize W over
+        wStep = 0.01
+        Wmax = self.W0 + (5*self.cov)*self.SIM_TIME
+
+        # Now, iterate over all of the possible state combinations
+        for w in range(0,Wmax,wStep):
+            for t in range(self.SIM_TIME)
+                states.add((w, t))
+
+        # Now, discretize / define the action space using some finite discretization
+        # step size similar to the above. 
+        aStep = 0.01
+        for a in range(0, 1, aStep):
+            actions.add(a)
 
 
 
@@ -102,18 +129,25 @@ if __name__ == "__main__":
     params["T"] = 0.4
     params["rho"] = 0.04
     params["r"] = 0.04
+
+    params["W0"] = 1.
     params["mu"] = np.array([0.08])
     params["cov"] = np.array([0.0009])
+
     params["epsilon"] = 1e-8
     params["gamma"] = 0.2
 
-    SIM_TIME = 5
+    params["SIM_TIME"] = 5
+
+
 
     # Instantiate the object
     mp = MertonProblem(params)
 
+    # TODO: Move this into a member function within the class
     # First, calculate the closed-form solution over our time range
-    # for both allocation (constant) and consumption (return a fraction for each timestep)
+    # for both allocation (constant) and consumption (return the optimal
+    # consumption fraction for each timestep)
     optAlloc = mp.getCFOptAllocation()
     optCons = [mp.getCFOptConsumption(t*mp.T/SIM_TIME) for t in range(SIM_TIME)]
 
