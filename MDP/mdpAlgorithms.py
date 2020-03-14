@@ -10,11 +10,11 @@ A = TypeVar('A')
 
 class MDPAlgorithm:
 	'''
-	Generic algorithm class for solving an MDP.
+	Generic algorithm class for solving an MDP through Dynamic Programming.
 	All algorithms we implement for solving MDPs will subclass this
-	"interface" and contain a solve method to solve the MDP
+	"interface" and contain a solve method to solve the MDP.
 	'''
-	def solve(self, mdp: MDP):
+	def solve(self, mdp):
 		'''
 		Interface function to solve a given MDP passed to the method.
 		This should explicitly set as a class member variable both the optimal policy, as well as the

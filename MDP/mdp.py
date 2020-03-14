@@ -207,6 +207,46 @@ class MRP(Generic[S]):
         ).dot(self.rewards_vec)
 
 
+class MDP_RL(Generic[S, A]):
+    '''
+    Interface for an MDP to be solved using a reinforcement learning
+    (RL) algorithm. Since RL algorithms will learn information on-line from
+    rollouts, we do not access rewards or probabilities directly. Instead 
+    we present at each state actions possible from that state, and
+    a dynamics model that allows us to "step" the state forward
+    so that we can generate simulation episodes
+    '''
+
+    def __init__(self, stateActionDict: Mapping[S, Set[A]],
+                    terminalStates: Set[S],
+                    dynamics: Callable[[S, A], Tuple[S, float]]) -> None:
+        '''
+        Constructor
+        '''
+        # Dynamics accept a state-action pair and return a successor state and reward.
+        # We exclude transition probability - the stochasticity of the dynamics
+        # handles this for us. We also do not explicitly expose a "reward function",
+        # i.e. calculation of the reward is confined to stepping forward in the dynamics
+        self.F = dynamics 
+
+        # Dict telling us what actions are available from what states
+        self.stateActionDict = stateActionDict 
+
+        # Set of terminal states for the problem (need this to
+        # test when to stop rollouts)
+        self.terminalStates = terminalStates
+
+
+    def isGameOver(self, state: S) -> bool:
+        '''
+        Helper method to check if we've finished the game, i.e.
+        when we have reached a terminal state
+        '''
+        return (state in self.terminalStates)
+
+
+
+
 
 class MDP(Generic[S,A]):
     '''

@@ -42,6 +42,7 @@ class MertonProblem():
        self.W0: float = W0 # Initial wealth
        self.mu: np.ndarray = mu # Means of the risky rate (1-D array of length = # of Risky Assets)
        self.cov: np.ndarray = cov # Risky rate covariants (2-D square array of length = # of Risky Assets)
+       self.numRiskyAssets = len(mu) # The number of risky assets that we have defined for the problem
 
        self.epsilon: float = epsilon # Bequest parameter for B(T)
        self.gamma: float = gamma # Parameter for CRRA utility function
@@ -128,11 +129,26 @@ class MertonProblem():
                 actions.add((pi,c))
 
         # Fill out the dict with our discretized state- and action-spaces. 
-        
+        for state in states:
+            mdpData[state] = dict()
+            for action in actions:
+                W, t = state
+                pi, c = action
+                mdpData[state][action] = dict()
 
-        # Now we must model rewards for each possible successor state.
-        # Reward per unit time is given by U(c_t), i.e. the utility
-        # of the amount that we consume
+                # Determine the new state value.
+                # Time increments forward, and we add to our wealth
+                # the net of our returns from all assets, less the amount we invested (c_t*W_t)
+                # (Note that is NOT the same as reward, which is computed using the utility function) 
+                tNew = t + 1
+                wNew = W + W*c*(-1 + (1-pi)*self.r + pi*np.sum(np.random.multivariate_normal(self.mu, self.cov, 1)))                                
+                succState = (wNew, tNew)
+
+                # Now we must model rewards for each possible successor state.
+                # Reward per unit time is given by U(c_t), i.e. the utility
+                # of the amount that we consume. In order to model the transition 
+                # probabilities we must discretize our noise
+                mdpData[state][action][succState] = ( , self.utilityFunc(c)) 
 
 
 
