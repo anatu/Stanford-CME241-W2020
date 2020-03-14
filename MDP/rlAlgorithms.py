@@ -39,7 +39,7 @@ class MonteCarloEG(MDPAlgorithmRL):
 		self.mdp = rlMdp # MDP object (created using RL interface)
 
 
-	def chooseRandomAction(self, eps=0.1) -> A:
+	def chooseRandomAction(self, actions: Sequence[A], eps: float = 0.1) -> A:
 		'''
 		Utility function for choosing a random action
 		with probability (1-eps) + (eps/N_ACTIONS)
@@ -51,7 +51,7 @@ class MonteCarloEG(MDPAlgorithmRL):
 		return np.random.choice(actions)
 
 
-	def initializeAgent(self, startState: S, policy: Mapping[S, Mapping[A, float]]) -> None:
+	def initializeAgent(self, startState: S, policy: Policy) -> None:
 		'''
 		Initialize the agent by setting a start state
 		and declaring a policy
@@ -60,7 +60,59 @@ class MonteCarloEG(MDPAlgorithmRL):
 		self.policy = policy
 
 
-	def episodeRollout(self) -> Tuple[Tuple[S, A, float]]:
+    def isGameOver(self) -> bool:
+        '''
+        Helper method to check if we've finished the game, i.e.
+        when we have reached a terminal state
+        '''
+        return (state in self.mdp.terminalStates)
+
+
+	def episodeRollout(self, startState: S, policy: Policy) -> Tuple[Tuple[S, A, float]]:
 		'''
-		Performs 
+		Performs a rollout of a single "episode" of the defined problem
+		beginning from start state, take actions as prescribed by a policy
+		until we reach a terminal state
 		'''
+		# Initialize the agent
+		self.initalizeAgent(startState, policy)
+		action = self.chooseRandomAction(self.policy[state].keys())
+
+		# Initialize data structures for storing episode history
+		succActionReward = []
+		succActionReward.append((self.state, action, 0))
+
+
+		# Forward Pass - Roll out the policy until the game ends
+		# and collect info about rewards and state-action pairs
+		while True:
+			# Step forward. If we have a stochastic policy take a
+			# weighted choice of actions from it
+			self.state, reward = mdp.dynamics(self.state, action)
+
+			# If game is over, assign zero reward and break
+			if self.isGameOver():
+				succActionReward.append((state, None, reward))
+				break
+			# Otherwise, append the rewards and choose a new action
+			else:
+				action = chooseRandomAction(self.policy[state].keys())
+				succActionReward.append((self.state, action, reward))
+
+
+		# Backwards Pass
+		G = 0
+		firstEntry = True
+		cumRewards = []
+
+		for state, action, reward, in reversed(succActionReward):
+
+			if firstEntry:
+				firstEntry = False
+			else:
+				cumRewards.append((state, action, G))
+
+
+
+
+

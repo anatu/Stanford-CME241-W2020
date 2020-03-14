@@ -99,7 +99,11 @@ class MertonProblem():
     def makeDiscretizedMDP(self) -> MDP:
         '''
         Takes the information prescribed for this Merton object
-        and builds an MDP out of it.
+        and builds a discretized MDP out of it so that it can be solved
+        using dynamic programming.
+
+        To do this we will make several simplifying assumptions
+        
         '''
         mdpData = dict()
         states = set()
