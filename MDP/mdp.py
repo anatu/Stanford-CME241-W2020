@@ -227,7 +227,7 @@ class MDP_RL(Generic[S, A]):
         # We exclude transition probability - the stochasticity of the dynamics
         # handles this for us. We also do not explicitly expose a "reward function",
         # i.e. calculation of the reward is confined to stepping forward in the dynamics
-        self.F = dynamics 
+        self.dynamics = dynamics 
 
         # Dict telling us what actions are available from what states
         self.stateActionDict = stateActionDict 
@@ -237,12 +237,6 @@ class MDP_RL(Generic[S, A]):
         self.terminalStates = terminalStates
 
 
-    def isGameOver(self, state: S) -> bool:
-        '''
-        Helper method to check if we've finished the game, i.e.
-        when we have reached a terminal state
-        '''
-        return (state in self.terminalStates)
 
 
 
