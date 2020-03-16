@@ -10,6 +10,7 @@ sys.path.append('../MDP')
 from MDP.mdp import MDP, MDP_RL, Policy
 import MDP.mdpUtils as mu
 from MDP.rlAlgorithms import MDPAlgorithmRL, MonteCarloEG
+from MDP.mdpAlgorithms import MDPAlgorithm, ValueIteration 
 
 
 P = TypeVar('P')
@@ -73,7 +74,7 @@ class MertonProblem():
         '''
         # Handle the 1D case without matrix operations
         if self.cov.shape == (1,1):
-            result = (1/self.cov[0][0])*(self.mu[0]-self.r)
+            result = (1/self.cov[0][0])*(self.mu[0]-self.r)/self.gamma
         else:
             result = np.linalg.inv(self.cov).dot(self.mu-self.r)/self.gamma
         return result
@@ -104,64 +105,82 @@ class MertonProblem():
         return optCons
 
 
-    # def makeDiscretizedMDP(self) -> MDP:
-    #     '''
-    #     Takes the information prescribed for this Merton object
-    #     and builds a discretized MDP out of it so that it can be solved
-    #     using dynamic programming.
+    def makeDiscretizedMDP(self) -> MDP:
+        '''
+        Takes the information prescribed for this Merton object
+        and builds a discretized MDP out of it so that it can be solved
+        using dynamic programming.
 
-    #     To do this we will make several simplifying assumptions
+        To do this we will make several simplifying assumptions:
+        - Discretize the state- and action-space so we can solve using a tabular method
+        - Since we can't model stochastic dynamics we will make the risky asset only have two possible
+        outcomes (+mu and -mu), with 50/50 probability. This assumption lets us directly prescribe
+        transition probabilities into the data structure 
         
-    #     '''
-    #     mdpData = dict()
-    #     states = set()
-    #     actions = set()
+        '''
+        mdpData = dict()
+        states = set()
+        actions = set()
+        terminalStates = set()
 
-    #     # First, define the set of states. We will form an upper bound on wealth as start wealth + 5X stdev of the risky asset
-    #     # over the course of the simulation time. Choose a step size to discretize W over
-    #     wStep = 0.01
-    #     Wmax = self.W0 + (5*self.cov)*self.SIM_TIME
+        # Discretize the state- and action-spaces
+        # State-space discretization. We will discretize only up to
+        # the max limit of growth of wealth by 5 stdevs of the highest value
+        # of risky asset return over the total simulation time
+        wStep = 0.01
+        Wmax = round(self.W0 + (5*(np.max(self.cov)+np.max(self.mu))*self.SIM_TIME),2)
+        N = (Wmax // wStep) + 2
+        w = 0
 
-    #     # Now, iterate over all of the possible state combinations
-    #     for w in range(0,Wmax,wStep):
-    #         for t in range(self.SIM_TIME):
-    #             states.add((w, t))
+        for w in np.linspace(0.,Wmax,N):
+            for t in range(self.SIM_TIME+1):
+                if t == self.SIM_TIME:
+                    terminalStates.add((round(w,2), t))
+                else:
+                    states.add((round(w,2), t))
 
-    #     # Now, discretize / define the action space using some finite discretization
-    #     # step size similar to the above. Our actions consist of pi (the fractional
-    #     # allocation among risky / riskless assets) and c (the fraction of our existing
-    #     # wealth we want to invest at that time step).
-    #     # NOTE: Here for pi we are making the simplifying assumption that Pi is the fraction
-    #     # allocated to the risky assets, i.e. if there is more than 1 risky asset it will split
-    #     # equally among all of them
-    #     piStep = 0.01
-    #     cStep = 0.01
-    #     for pi in range(0, 1, piStep):
-    #         for c in range(0, 1, cStep):
-    #             actions.add((pi,c))
+        # Action-space discretization
+        actionStep = 0.01
+        aN = (1//actionStep) + 1
+        for pi in np.linspace(0, 1, aN):
+            for c in np.linspace(0, 1, aN):
+                actions.add((pi,c))
 
-    #     # Fill out the dict with our discretized state- and action-spaces. 
-    #     for state in states:
-    #         mdpData[state] = dict()
-    #         for action in actions:
-    #             W, t = state
-    #             pi, c = action
-    #             mdpData[state][action] = dict()
+        # Fill out the dict with our discretized state- and action-spaces. 
+        for state in states:
+            mdpData[state] = dict()
+            for action in actions:
+                W, t = state
+                pi, c = action
+                mdpData[state][action] = dict()
 
-    #             # Determine the new state value.
-    #             # Time increments forward, and we add to our wealth
-    #             # the net of our returns from all assets, less the amount we invested (c_t*W_t)
-    #             # (Note that is NOT the same as reward, which is computed using the utility function) 
-    #             tNew = t + 1
-    #             wNew = W + W*c*(-1 + (1-pi)*self.r + pi*np.sum(np.random.multivariate_normal(self.mu, self.cov, 1)))                                
-    #             succState = (wNew, tNew)
+                # Determine the two possible successor states, for each of the possible
+                # two return values of the risky asset.
+                # the net of our returns from all assets, less the amount we invested (c_t*W_t)
+                # (Note that is NOT the same as reward, which is computed using the utility function) 
+                wPos = round(W + W*c*((1-pi)*self.r + pi*self.mu[0]), 2)                                
+                wNeg = round(W + W*c*((1-pi)*self.r - pi*self.mu[0]), 2)                                
+                # Assign reward of the final wealth if it's a terminal state. Otherwise
+                # the reward is zero
+                if t == self.SIM_TIME:
+                    tNew = t + 1
+                    rPos = self.utilityFunc(wPos)
+                    rNeg = self.utilityFunc(wNeg)
+                else:
+                    tNew = t
+                    rPos = 0
+                    rNeg = 0
 
-    #             # Now we must model rewards for each possible successor state.
-    #             # Reward per unit time is given by U(c_t), i.e. the utility
-    #             # of the amount that we consume. In order to model the transition 
-    #             # probabilities we must discretize our noise
-    #             mdpData[state][action][succState] = ( , self.utilityFunc(c)) 
+                succPos = (wPos, tNew)
+                succNeg = (wNeg, tNew)
+                # Populate dict
+                if state not in terminalStates:
+                    mdpData[state][action][succPos] = (0.5, rPos) 
+                    mdpData[state][action][succNeg] = (0.5, rNeg) 
+                else:
+                    mdpData[state][action][state] = (1.0, 0)
 
+        return MDP(mdpData, (1-self.rho))
 
 
     def makeRLMDP(self) -> MDP_RL:
@@ -178,18 +197,19 @@ class MertonProblem():
         # Discretize the state- and action-spaces
         # State-space discretization. We will discretize only up to
         # the max limit of growth of wealth by 5 stdevs of the highest value
-        # in the covariance matrix over the total simulation time
+        # of the risky asset return realized for each step of the total simulation time
         wStep = 0.01
-        Wmax = round(self.W0 + (5*np.max(self.cov))*self.SIM_TIME, 2)
+        Wmax = round(self.W0 + (5*(np.max(self.cov)+np.max(self.mu))*self.SIM_TIME),2)
         N = (Wmax // wStep) + 2
         w = 0
-
+        print(Wmax)
         for w in np.linspace(0.,Wmax,N):
             for t in range(self.SIM_TIME+1):
                 if t == self.SIM_TIME:
                     terminalStates.add((round(w,2), t))
                 else:
                     states.add((round(w,2), t))
+        print(states)
 
         # Action-space discretization
         actionStep = 0.01
@@ -214,7 +234,7 @@ class MertonProblem():
             tNew = t + 1
 
             # Increment wealth forward based on action
-            wNew = W + W*c*(-1 + (1-pi)*self.r + pi*np.sum(np.random.multivariate_normal(self.mu, self.cov, 1)))                                
+            wNew = W + W*c*((1-pi)*self.r + pi*np.sum(np.random.multivariate_normal(self.mu, self.cov, 1)))                                
             wNew = round(wNew, 2)
 
             # Form the new successor state
@@ -257,26 +277,50 @@ if __name__ == "__main__":
     # consumption fraction for each timestep)
     optAlloc = mp.getCFOptAllocation()
     optCons = [mp.getCFOptConsumption(t*mp.T/mp.SIM_TIME) for t in range(mp.SIM_TIME)]
+    # print(optAlloc) 
+    # print(optCons) 
 
+    # RL Solution
+    ############################################
+    # # Create the RL MDP representation
+    # rl_mdp = mp.makeRLMDP()
 
-    # Create the RL MDP representation
-    rl_mdp = mp.makeRLMDP()
-
-    # Make a random policy out of the info
-    polData = dict()
-    for state in rl_mdp.stateActionDict.keys():
-        polData[state] = dict()
-        numActions = len(rl_mdp.stateActionDict[state])
-        for action in rl_mdp.stateActionDict[state]:
-            polData[state][action] = 1/numActions
-    startPol = Policy(polData)
+    # # Make a random policy out of the info
+    # polData = dict()
+    # for state in rl_mdp.stateActionDict.keys():
+    #     polData[state] = dict()
+    #     numActions = len(rl_mdp.stateActionDict[state])
+    #     for action in rl_mdp.stateActionDict[state]:
+    #         polData[state][action] = 1/numActions
+    # startPol = Policy(polData)
     
-    # Instantiate the MC solver
-    mc_eg = MonteCarloEG(rl_mdp, 1-params["rho"])
+    # # Instantiate the MC solver
+    # mc_eg = MonteCarloEG(rl_mdp, 1-params["rho"])
     
-    startState = (params["W0"], 0)
+    # startState = (params["W0"], 0)
 
-    # Run simulation and perform model-free policy iteration
-    # using EG policy improvement
-    policy, optValue = mc_eg.simulate_eg(startState, startPol, 100)
+    # # Run simulation and perform model-free policy iteration
+    # # using EG policy improvement
+    # policy, optValue = mc_eg.simulate_eg(startState, startPol, 100)
+
+    # # Report the results
+    # for state in policy.polData.keys():
+    #     maxAct, _ = mu.maximizeOverDict(policy.polData[state])
+    #     print(maxAct)
+
+    ############################################
+
+
+    # Discrete MDP solution
+    ############################################
+    # Create the MDP representation
+    mdp = mp.makeDiscretizedMDP()
+
+    # Solve using value iteration
+    vi = ValueIteration(1e-8)
+    vi.solve(mdp)
+
+    print(vi.V)
+    print(vi.pi)
+
 
